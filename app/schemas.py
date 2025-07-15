@@ -47,7 +47,7 @@ class SeatBase(BaseModel):
     name: str
     type: SeatType
     counter_id: int
-    occupied: Optional[bool] = False
+    status: Optional[bool] = False
 
 class SeatCreate(SeatBase):
     pass
