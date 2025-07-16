@@ -16,8 +16,8 @@ def get_db():
 @router.post("/", response_model=schemas.Ticket)
 def create_ticket(
     ticket: schemas.TicketCreate,
-    db: Session = Depends(get_db),
-    background_tasks: BackgroundTasks = Depends()
+    background_tasks: BackgroundTasks,  
+    db: Session = Depends(get_db)
 ):
     new_ticket = crud.create_ticket(db, ticket)
 
