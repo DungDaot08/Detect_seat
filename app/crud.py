@@ -76,7 +76,7 @@ def get_procedures_with_counters(db: Session, search: str = "") -> List[dict]:
         # Tính điểm fuzzy so khớp tên thủ tục
         score = fuzz.partial_ratio(search.lower(), proc.name.lower()) if search else 100
 
-        if score >= 60:
+        if score >= 80:
             # Tìm các quầy phục vụ thủ tục này thông qua bảng trung gian CounterField
             counter_ids = (
                 db.query(models.CounterField.counter_id)
