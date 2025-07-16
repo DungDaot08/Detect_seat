@@ -39,7 +39,7 @@ def update_seat(seat_id: int, seat_update: schemas.SeatUpdate, db: Session = Dep
         seat_id=seat_id,
         old_status=old_status,
         new_status=new_status,
-        timestamp=datetime.utcnow()
+        #timestamp=datetime.utcnow()
     )
     db.add(log)
     db.commit()
