@@ -1,16 +1,18 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks
 from sqlalchemy.orm import Session
 from app import crud, database, schemas
 from app.models import Counter, User
 from app.schemas import CounterPauseCreate, CounterPauseLog
 from app.auth import get_db, get_current_user, check_counter_permission
 from typing import Optional
+from app.api.endpoints.realtime import notify_frontend
 
 router = APIRouter()
 
 @router.post("/{counter_id}/call-next", response_model=Optional[schemas.CalledTicket])
 def call_next_manually(
     counter_id: int,
+    background_tasks: BackgroundTasks,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
@@ -18,10 +20,21 @@ def call_next_manually(
 
     ticket = crud.call_next_ticket(db, counter_id)
     if ticket:
+        # ✅ Gửi sự kiện WebSocket qua background task
+        background_tasks.add_task(
+            notify_frontend,
+            {
+                "event": "ticket_called",
+                "ticket_number": ticket.number,
+                "counter_name": ticket.counter.name
+            }
+        )
+
         return schemas.CalledTicket(
             number=ticket.number,
             counter_name=ticket.counter.name
         )
+
     raise HTTPException(status_code=404, detail="Không còn vé để gọi.")
 
 @router.post("/{counter_id}/pause", response_model=CounterPauseLog)
