@@ -2,12 +2,13 @@ from sqlalchemy.orm import Session
 from app import models
 from typing import List, Optional
 from rapidfuzz import fuzz
-from datetime import date
+from datetime import datetime, time
 from sqlalchemy import extract
 from app.models import Procedure, Counter, CounterField, Ticket
 from app import models, schemas, auth
 from passlib.context import CryptContext
 from fastapi import HTTPException
+from pytz import timezone
 
 pwd_context = CryptContext(schemes=["pbkdf2_sha256"], deprecated="auto")
 
@@ -49,13 +50,19 @@ def get_procedures(db: Session, search: str = "") -> List[models.Procedure]:
     return [proc for _, proc in results]
 
 def create_ticket(db: Session, ticket: schemas.TicketCreate) -> models.Ticket:
-    today = date.today()
+    today = datetime.now(timezone("Asia/Ho_Chi_Minh")).date()
 
-    latest = db.query(models.Ticket) \
-        .filter(models.Ticket.counter_id == ticket.counter_id) \
-        .filter(extract('day', models.Ticket.created_at) == today.day) \
-        .order_by(models.Ticket.number.desc()) \
+    start_of_day = datetime.combine(today, time.min)  # 00:00:00
+    end_of_day = datetime.combine(today, time.max)    # 23:59:59.999999
+
+    latest = (
+        db.query(models.Ticket)
+        .filter(models.Ticket.counter_id == ticket.counter_id)
+        .filter(models.Ticket.created_at >= start_of_day)
+        .filter(models.Ticket.created_at <= end_of_day)
+        .order_by(models.Ticket.number.desc())
         .first()
+    )
 
     next_number = 1 if not latest else latest.number + 1
 
