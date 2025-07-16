@@ -2,6 +2,8 @@ from datetime import datetime, timedelta
 from sqlalchemy.orm import Session
 from app.models import Counter, Seat, Ticket
 from app.database import SessionLocal
+from app.api.endpoints.realtime import notify_frontend
+import asyncio
 
 def check_and_call_next():
     db: Session = SessionLocal()
@@ -39,6 +41,11 @@ def check_and_call_next():
                     print(f"🎯 Gọi vé {next_ticket.number} tại quầy {counter.name}")
                     next_ticket.status = "called"
                     db.commit()
+                    asyncio.create_task(notify_frontend({
+                        "event": "ticket_called",
+                        "ticket_number": next_ticket.number,
+                        "counter_name": counter.name
+                    }))
 
     except Exception as e:
         print(f"❌ Lỗi khi auto-call: {e}")
