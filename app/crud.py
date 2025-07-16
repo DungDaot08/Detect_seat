@@ -67,6 +67,11 @@ def create_ticket(db: Session, ticket: schemas.TicketCreate) -> models.Ticket:
     db.refresh(db_ticket)
     return db_ticket
 
+def get_waiting_tickets(db: Session, counter_id: Optional[int] = None):
+    query = db.query(models.Ticket).filter(models.Ticket.status == "waiting")
+    if counter_id is not None:
+        query = query.filter(models.Ticket.counter_id == counter_id)
+    return query.order_by(models.Ticket.created_at.asc()).all()
 def get_procedures_with_counters(db: Session, search: str = "") -> List[dict]:
     procedures = db.query(models.Procedure).all()
 
