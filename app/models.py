@@ -61,7 +61,17 @@ class CounterField(Base):
 class SeatType(str, enum.Enum):
     officer = "officer"
     client = "client"
-    
+
+class SeatLog(Base):
+    __tablename__ = "seat_logs"
+
+    id = Column(Integer, primary_key=True, index=True)
+    seat_id = Column(Integer, ForeignKey("seats.id"))
+    old_status = Column(Boolean)
+    new_status = Column(Boolean)
+    timestamp = Column(DateTime, default=func.now())
+
+    seat = relationship("Seat", back_populates="logs")
 class Seat(Base):
     __tablename__ = "seats"
 
@@ -73,6 +83,7 @@ class Seat(Base):
     last_empty_time = Column(DateTime, nullable=True)
 
     counter = relationship("Counter", back_populates="seats")
+    logs = relationship("SeatLog", back_populates="seat")
 
 class CounterPauseLog(Base):
     __tablename__ = "counter_pause_logs"
