@@ -25,7 +25,7 @@ def create_ticket(
         notify_frontend, {
             "event": "new_ticket",
             "ticket_number": new_ticket.number,
-            "counter_name": new_ticket.counter_id
+            "counter_id": new_ticket.counter_id
         }
     )
 
