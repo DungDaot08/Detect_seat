@@ -38,7 +38,7 @@ class Counter(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     name = Column(String, nullable=False)
-    timeout_seconds = Column(Integer, default=60)
+    timeout_seconds = Column(Integer, default=10)
     status = Column(String(20), nullable=False, default="active")
 
     counter_fields = relationship("CounterField", back_populates="counter")

@@ -29,7 +29,7 @@ app.include_router(seats.router, prefix="/seats", tags=["Seats"])
 app.include_router(counters.router, prefix="/counters", tags=["Counters"])
 app.include_router(users.router, prefix="/auths", tags=["Authentication"])
 @app.on_event("startup")
-@repeat_every(seconds=1)
+@repeat_every(seconds=10)
 def auto_call_tickets():
     check_and_call_next()
     
