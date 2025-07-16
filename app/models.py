@@ -32,7 +32,6 @@ class Ticket(Base):
     status = Column(String(20), default="waiting")
 
     counter = relationship("Counter", back_populates="tickets")
-    
 class Counter(Base):
     __tablename__ = "counters"
 

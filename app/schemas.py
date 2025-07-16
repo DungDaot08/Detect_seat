@@ -38,7 +38,8 @@ class Ticket(BaseModel):
 
     class Config:
         orm_mode = True
-        
+class TicketUpdateStatus(BaseModel):
+    status: str
 class SeatType(str, Enum):
     officer = "officer"
     client = "client"

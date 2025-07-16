@@ -7,6 +7,7 @@ from sqlalchemy import extract
 from app.models import Procedure, Counter, CounterField, Ticket
 from app import models, schemas, auth
 from passlib.context import CryptContext
+from fastapi import HTTPException
 
 pwd_context = CryptContext(schemes=["pbkdf2_sha256"], deprecated="auto")
 
@@ -127,6 +128,15 @@ def call_next_ticket(db: Session, counter_id: int) -> Optional[Ticket]:
 
     return None
 
+def update_ticket_status(db: Session, ticket_id: int, status_update: schemas.TicketUpdateStatus):
+    ticket = db.query(models.Ticket).filter(models.Ticket.id == ticket_id).first()
+    if not ticket:
+        raise HTTPException(status_code=404, detail="Ticket not found")
+
+    ticket.status = status_update.status
+    db.commit()
+    db.refresh(ticket)
+    return ticket
 
 def pause_counter(db: Session, counter_id: int, reason: str):
     # ✅ Ghi log

@@ -22,3 +22,7 @@ def get_waiting_tickets(
     db: Session = Depends(get_db)
 ):
     return crud.get_waiting_tickets(db, counter_id)
+
+@router.put("/{ticket_id}/status", response_model=schemas.Ticket)
+def update_ticket_status(ticket_id: int, status_update: schemas.TicketUpdateStatus, db: Session = Depends(get_db)):
+    return crud.update_ticket_status(db, ticket_id, status_update)
