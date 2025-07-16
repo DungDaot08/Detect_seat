@@ -23,9 +23,9 @@ def create_ticket(
 
     background_tasks.add_task(
         notify_frontend, {
-            "event": "ticket_called",
+            "event": "new_ticket",
             "ticket_number": new_ticket.number,
-            "counter_name": f"Quầy {new_ticket.counter_id}"
+            "counter_name": new_ticket.counter_id
         }
     )
 
