@@ -130,7 +130,7 @@ def call_next_ticket(db: Session, counter_id: int) -> Optional[Ticket]:
         .first()
     )
     if current_ticket:
-        #current_ticket.status = "done"
+        current_ticket.status = "done"
         current_ticket.finished_at = now
 
     # Lấy vé tiếp theo theo quầy đó (giả định: theo thứ tự created_at)
@@ -192,9 +192,10 @@ def create_user(db: Session, user: schemas.UserCreate):
     hashed_password = auth.hash_password(user.password)
     db_user = models.User(
         username=user.username, 
-        hashed_password=hashed_password, 
+        hashed_password=hashed_password,
+        full_name=user.full_name, 
         role=user.role,
-        counter_id=user.counter_id if user.role == "staff" else None)
+        counter_id=user.counter_id if user.role == "officer" else None)
     db.add(db_user)
     db.commit()
     db.refresh(db_user)
