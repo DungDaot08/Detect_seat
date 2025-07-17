@@ -7,6 +7,8 @@ from app.auth import get_db, get_current_user, check_counter_permission
 from typing import Optional
 from app.api.endpoints.realtime import notify_frontend
 from app.utils.auto_call_loop import reset_events
+from datetime import datetime
+import pytz
 
 router = APIRouter()
 
@@ -22,12 +24,14 @@ def call_next_manually(
     ticket = crud.call_next_ticket(db, counter_id)
     if ticket:
         # ✅ Gửi sự kiện WebSocket qua background task
+        vn_time = datetime.now(pytz.timezone("Asia/Ho_Chi_Minh")).isoformat()
         background_tasks.add_task(
             notify_frontend,
             {
                 "event": "ticket_called",
                 "ticket_number": ticket.number,
-                "counter_name": ticket.counter.name
+                "counter_name": ticket.counter.name,
+                "timestamp": vn_time
             }
         )
         event = reset_events.get(counter_id)

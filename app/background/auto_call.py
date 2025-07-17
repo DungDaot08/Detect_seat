@@ -63,10 +63,12 @@ async def check_and_call_next_for_counter(counter_id: int):
                 next_ticket.called_at = now  # nếu có field thời gian gọi
                 db.commit()
 
+                vn_time = datetime.now(pytz.timezone("Asia/Ho_Chi_Minh")).isoformat()
                 await notify_frontend({
                     "event": "ticket_called",
                     "ticket_number": next_ticket.number,
-                    "counter_name": counter.name
+                    "counter_name": counter.name,
+                    "timestamp": vn_time
                 })
 
     except Exception as e:

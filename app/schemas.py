@@ -65,6 +65,14 @@ class Seat(SeatBase):
     class Config:
         orm_mode = True
 
+class SeatPublic(BaseModel):
+    id: int
+    status: bool
+    type: str
+    counter_id: int
+
+    class Config:
+        orm_mode = True
 class CalledTicket(BaseModel):
     number: int
     counter_name: str

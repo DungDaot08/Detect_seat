@@ -54,14 +54,14 @@ def update_seat(seat_id: int, seat_update: schemas.SeatUpdate, db: Session = Dep
 
     return seat
 
-@router.get("/{seat_id}", response_model=schemas.Seat)
+@router.get("/{seat_id}", response_model=schemas.SeatPublic)
 def get_seat(seat_id: int, db: Session = Depends(get_db)):
     seat = db.query(models.Seat).filter(models.Seat.id == seat_id).first()
     if not seat:
         raise HTTPException(status_code=404, detail="Seat not found")
     return seat
 
-@router.get("/counter/{counter_id}", response_model=List[schemas.Seat])
+@router.get("/counter/{counter_id}", response_model=List[schemas.SeatPublic])
 def get_client_seats_by_counter(counter_id: int, db: Session = Depends(get_db)):
     seats = db.query(models.Seat).filter(
         models.Seat.counter_id == counter_id,
