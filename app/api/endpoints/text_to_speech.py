@@ -19,7 +19,7 @@ class TTSRequest(BaseModel):
     counter_id: int
     ticket_number: int
 
-@router.post("/tts", response_class=FileResponse)
+@router.post("/", response_class=FileResponse)
 def generate_tts(request: TTSRequest, background_tasks: BackgroundTasks, db: Session = Depends(get_db)):
     counter = db.query(models.Counter).filter(models.Counter.id == request.counter_id).first()
     if not counter:
