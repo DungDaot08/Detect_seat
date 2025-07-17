@@ -6,7 +6,7 @@ from app.schemas import CounterPauseCreate, CounterPauseLog
 from app.auth import get_db, get_current_user, check_counter_permission
 from typing import Optional
 from app.api.endpoints.realtime import notify_frontend
-from app.utils.auto_call_loop import reset_event
+from app.utils.auto_call_loop import reset_events
 
 router = APIRouter()
 
@@ -20,7 +20,6 @@ def call_next_manually(
     check_counter_permission(counter_id, current_user)
 
     ticket = crud.call_next_ticket(db, counter_id)
-    reset_event.set()
     if ticket:
         # ✅ Gửi sự kiện WebSocket qua background task
         background_tasks.add_task(
@@ -31,6 +30,11 @@ def call_next_manually(
                 "counter_name": ticket.counter.name
             }
         )
+        event = reset_events.get(counter_id)
+        if event:
+            print(f"♻️ Reset auto-call cho quầy {counter_id}")
+            event.set()
+
 
         return schemas.CalledTicket(
             number=ticket.number,

@@ -4,9 +4,10 @@ from fastapi_utils.tasks import repeat_every
 from contextlib import asynccontextmanager
 import asyncio
 from app.api.endpoints import procedures, tickets, seats, counters, users, realtime
-from app.database import engine, Base
-from app.background.auto_call import check_and_call_next
-from app.utils.auto_call_loop import auto_call_loop
+from app.database import engine, Base, SessionLocal
+#from app.background.auto_call import check_and_call_next
+from app.models import Counter
+from app.utils.auto_call_loop import auto_call_loop_for_counter
 
 # ✅ Khởi tạo DB
 Base.metadata.create_all(bind=engine)
@@ -14,9 +15,21 @@ Base.metadata.create_all(bind=engine)
 # ✅ Khai báo lifespan thay cho on_event("startup")
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    task = asyncio.create_task(auto_call_loop())
+    db = SessionLocal()
+    try:
+        # 🔍 Truy vấn tất cả counter_id từ database
+        counter_ids = [c.id for c in db.query(Counter.id).all()]
+    finally:
+        db.close()
+    tasks = [asyncio.create_task(auto_call_loop_for_counter(counter_id)) for counter_id in counter_ids]
+
     yield
-    task.cancel()
+
+    for task in tasks:
+        task.cancel()
+
+# ✅ Khởi tạo FastAPI với lifecycle
+app = FastAPI(lifespan=lifespan)
 
 
 # ✅ Tạo app chính

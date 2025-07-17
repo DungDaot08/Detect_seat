@@ -11,6 +11,7 @@ from fastapi import HTTPException
 from pytz import timezone
 
 pwd_context = CryptContext(schemes=["pbkdf2_sha256"], deprecated="auto")
+vn_tz = timezone("Asia/Ho_Chi_Minh")
 
 def get_user_by_username(db: Session, username: str):
     return db.query(models.User).filter(models.User.username == username).first()
@@ -114,9 +115,23 @@ def get_procedures_with_counters(db: Session, search: str = "") -> List[dict]:
 
 def call_next_ticket(db: Session, counter_id: int) -> Optional[Ticket]:
     # Kiểm tra xem quầy có tồn tại không
+    now = datetime.now(vn_tz)
     counter = db.query(Counter).filter(Counter.id == counter_id).first()
     if not counter:
         return None
+    
+    current_ticket = (
+        db.query(Ticket)
+        .filter(
+            Ticket.status == "called",
+            Ticket.counter_id == counter.id
+        )
+        .order_by(Ticket.called_at.desc())  # Ưu tiên mới nhất nếu có nhiều
+        .first()
+    )
+    if current_ticket:
+        #current_ticket.status = "done"
+        current_ticket.finished_at = now
 
     # Lấy vé tiếp theo theo quầy đó (giả định: theo thứ tự created_at)
     next_ticket = (
@@ -129,6 +144,7 @@ def call_next_ticket(db: Session, counter_id: int) -> Optional[Ticket]:
 
     if next_ticket:
         next_ticket.status = "called"
+        next_ticket.called_at = now
         db.commit()
         db.commit()
         return next_ticket

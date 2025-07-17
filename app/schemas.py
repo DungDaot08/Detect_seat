@@ -35,6 +35,8 @@ class Ticket(BaseModel):
     counter_id: int
     created_at: datetime
     status: str
+    called_at: datetime
+    finished_at: datetime
 
     class Config:
         orm_mode = True

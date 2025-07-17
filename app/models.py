@@ -30,6 +30,8 @@ class Ticket(Base):
     counter_id = Column(Integer, ForeignKey("counters.id"), nullable=False)
     created_at = Column(DateTime, default=func.now())
     status = Column(String(20), default="waiting")
+    called_at = Column(DateTime, nullable=True, default=None)
+    finished_at = Column(DateTime, nullable=True, default=None)
 
     counter = relationship("Counter", back_populates="tickets")
 class Counter(Base):
