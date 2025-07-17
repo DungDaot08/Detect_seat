@@ -122,11 +122,9 @@ def call_next_ticket(db: Session, counter_id: int) -> Optional[Ticket]:
     
     current_ticket = (
         db.query(Ticket)
-        .filter(
-            Ticket.status == "called",
-            Ticket.counter_id == counter.id
-        )
-        .order_by(Ticket.called_at.desc())  # Ưu tiên mới nhất nếu có nhiều
+        .filter(Ticket.counter_id == counter_id)
+        .filter(Ticket.status == "called")
+        .order_by(Ticket.created_at)
         .first()
     )
     if current_ticket:
