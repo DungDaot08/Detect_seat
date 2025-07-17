@@ -4,6 +4,8 @@ from typing import List
 from datetime import datetime
 import pytz
 from app import models, schemas, database
+from app.utils.auto_call_loop import reset_event
+
 vn_tz = pytz.timezone("Asia/Ho_Chi_Minh")
 router = APIRouter()
 
@@ -44,5 +46,7 @@ def update_seat(seat_id: int, seat_update: schemas.SeatUpdate, db: Session = Dep
     db.add(log)
     db.commit()
     db.refresh(seat)
+    if old_status != new_status:
+        reset_event.set()
     return seat
 
