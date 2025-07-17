@@ -2,10 +2,11 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi_utils.tasks import repeat_every
 from contextlib import asynccontextmanager
-
+import asyncio
 from app.api.endpoints import procedures, tickets, seats, counters, users, realtime
 from app.database import engine, Base
 from app.background.auto_call import check_and_call_next
+from app.utils.auto_call_loop import auto_call_loop
 
 # ✅ Khởi tạo DB
 Base.metadata.create_all(bind=engine)
@@ -13,16 +14,9 @@ Base.metadata.create_all(bind=engine)
 # ✅ Khai báo lifespan thay cho on_event("startup")
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    @repeat_every(seconds=60)
-    async def auto_call_tickets():
-        await check_and_call_next()
-
-    # Gọi ngay khi khởi động
-    await auto_call_tickets()
-
-    yield  # FastAPI sẽ chạy app từ đây trở đi
-
-    # (Tuỳ chọn) Cleanup khi shutdown (if needed)
+    task = asyncio.create_task(auto_call_loop())
+    yield
+    task.cancel()
 
 
 # ✅ Tạo app chính
