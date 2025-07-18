@@ -1,10 +1,10 @@
 from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks
 from sqlalchemy.orm import Session
-from app import crud, database, schemas
+from app import crud, database, schemas, models
 from app.models import Counter, User
 from app.schemas import CounterPauseCreate, CounterPauseLog
 from app.auth import get_db, get_current_user, check_counter_permission
-from typing import Optional
+from typing import Optional, List
 from app.api.endpoints.realtime import notify_frontend
 from app.utils.auto_call_loop import reset_events
 from datetime import datetime
@@ -74,4 +74,14 @@ def resume_counter_route(
         raise HTTPException(status_code=404, detail="Counter not found")
     return counter
 
+@router.get("/", response_model=List[schemas.Counter])
+def get_all_counters(db: Session = Depends(get_db)):
+    counters = db.query(models.Counter).all()
+    return counters
 
+@router.get("/{counter_id}", response_model=schemas.Counter)
+def get_counter_by_id(counter_id: int, db: Session = Depends(get_db)):
+    counter = db.query(models.Counter).filter(models.Counter.id == counter_id).first()
+    if not counter:
+        raise HTTPException(status_code=404, detail="Counter not found")
+    return counter
