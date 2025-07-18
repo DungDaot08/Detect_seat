@@ -76,7 +76,7 @@ def resume_counter_route(
 
 @router.get("/", response_model=List[schemas.Counter])
 def get_all_counters(db: Session = Depends(get_db)):
-    counters = db.query(models.Counter).all()
+    counters = db.query(models.Counter).order_by(models.Counter.id).all()
     return counters
 
 @router.get("/{counter_id}", response_model=schemas.Counter)
