@@ -119,6 +119,8 @@ def call_next_ticket(db: Session, counter_id: int) -> Optional[Ticket]:
     counter = db.query(Counter).filter(Counter.id == counter_id).first()
     if not counter:
         return None
+    if counter.status != "active":
+        return None 
     
     current_ticket = (
         db.query(Ticket)
@@ -130,6 +132,7 @@ def call_next_ticket(db: Session, counter_id: int) -> Optional[Ticket]:
     if current_ticket:
         current_ticket.status = "done"
         current_ticket.finished_at = now
+        db.commit()
 
     # Lấy vé tiếp theo theo quầy đó (giả định: theo thứ tự created_at)
     next_ticket = (
@@ -143,7 +146,6 @@ def call_next_ticket(db: Session, counter_id: int) -> Optional[Ticket]:
     if next_ticket:
         next_ticket.status = "called"
         next_ticket.called_at = now
-        db.commit()
         db.commit()
         return next_ticket
 
@@ -160,25 +162,51 @@ def update_ticket_status(db: Session, ticket_id: int, status_update: schemas.Tic
     return ticket
 
 def pause_counter(db: Session, counter_id: int, reason: str):
-    # ✅ Ghi log
-    log = models.CounterPauseLog(counter_id=counter_id, reason=reason)
+    now = datetime.now(vn_tz)  # hoặc datetime.now(vn_tz) nếu dùng múi giờ
+
+    # ✅ Ghi log với thời gian bắt đầu
+    log = models.CounterPauseLog(
+        counter_id=counter_id,
+        reason=reason,
+        start_time=now
+    )
     db.add(log)
 
     # ✅ Cập nhật trạng thái counter
     counter = db.query(models.Counter).filter(models.Counter.id == counter_id).first()
     if counter:
         counter.status = "paused"
+        counter.reason = reason
 
     db.commit()
     db.refresh(log)
     return log
 
 def resume_counter(db: Session, counter_id: int):
+    now = datetime.now(vn_tz)
+
     counter = db.query(models.Counter).filter(models.Counter.id == counter_id).first()
     if not counter:
         return None
+
+    # ✅ Tìm log pause gần nhất CHƯA có end_time
+    last_log = (
+        db.query(models.CounterPauseLog)
+        .filter(
+            models.CounterPauseLog.counter_id == counter_id,
+            models.CounterPauseLog.end_time == None
+        )
+        .order_by(models.CounterPauseLog.start_time.desc())
+        .first()
+    )
+
+    if last_log:
+        last_log.end_time = now
+
+    # ✅ Cập nhật trạng thái quầy
     counter.status = "active"
-    counter.pause_reason = None
+    counter.reason = None
+
     db.commit()
     db.refresh(counter)
     return counter

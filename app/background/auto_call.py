@@ -16,6 +16,8 @@ async def check_and_call_next_for_counter(counter_id: int):
         if not counter:
             print(f"❌ Không tìm thấy quầy với ID {counter_id}")
             return
+        if counter.status != "active":
+            return  
 
         seats = counter.seats
         if not seats or len(seats) < 2:
@@ -45,6 +47,7 @@ async def check_and_call_next_for_counter(counter_id: int):
             if current_ticket:
                 current_ticket.status = "done"
                 current_ticket.finished_at = now  # nếu có field thời gian kết thúc
+                db.commit()
 
             # 👉 Gọi vé tiếp theo
             next_ticket = (

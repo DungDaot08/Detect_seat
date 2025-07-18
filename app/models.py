@@ -93,6 +93,8 @@ class CounterPauseLog(Base):
     counter_id = Column(Integer, ForeignKey("counters.id"), nullable=False)
     reason = Column(Text, nullable=False)
     created_at = Column(DateTime, server_default=func.now())
+    start_time = Column(DateTime, nullable=True, default=func.now())  # 🆕 thời gian bắt đầu pause
+    end_time = Column(DateTime, nullable=True)   
 
     counter = relationship("Counter", backref="pause_logs")
     

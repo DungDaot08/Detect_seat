@@ -87,6 +87,8 @@ class CounterPauseLog(BaseModel):
     counter_id: int
     reason: str
     created_at: datetime
+    start_time: datetime  # 🆕
+    end_time: Optional[datetime] = None
     class Config:
         orm_mode = True
         
