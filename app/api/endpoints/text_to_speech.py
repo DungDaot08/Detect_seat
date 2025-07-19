@@ -26,7 +26,7 @@ def generate_tts(request: TTSRequest, background_tasks: BackgroundTasks, db: Ses
         raise HTTPException(status_code=404, detail="Counter not found")
     
     # Tạo nội dung lời thoại
-    text = f"Xin mời khách hàng số {request.ticket_number} đến quầy số {request.counter_id} - {counter.name}"
+    text = f"Xin mời khách hàng số {request.ticket_number} đến quầy số {request.counter_id}: {counter.name}"
 
     # Tạo file mp3
     filename = f"voice_{uuid.uuid4().hex}.mp3"

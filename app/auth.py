@@ -85,14 +85,14 @@ def get_leader_user(user: models.User = Depends(get_current_user)) -> models.Use
     return user
 
 def get_staff_user(user: models.User = Depends(get_current_user)) -> models.User:
-    if user.role != "staff":
+    if user.role != "officer":
         raise HTTPException(status_code=403, detail="Chỉ cán bộ mới có quyền")
     return user
 
 def check_counter_permission(counter_id: int, user: models.User):
     if user.role in ["admin", "leader"]:
         return
-    if user.role == "staff" and user.counter_id == counter_id:
+    if user.role == "officer" and user.counter_id == counter_id:
         return
     raise HTTPException(
         status_code=status.HTTP_403_FORBIDDEN,
