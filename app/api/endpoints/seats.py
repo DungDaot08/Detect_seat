@@ -46,7 +46,7 @@ def update_seat(seat_id: int, seat_update: schemas.SeatUpdate, db: Session = Dep
     db.add(log)
     db.commit()
     db.refresh(seat)
-    if old_status != new_status:
+    if old_status != new_status and seat.type == "client":
         event = reset_events.get(seat.counter_id)
         if event:
             print(f"♻️ Reset auto-call cho quầy {seat.counter_id}")
