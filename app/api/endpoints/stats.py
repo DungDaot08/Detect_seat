@@ -176,6 +176,7 @@ def afk_duration(
 ):
     from collections import defaultdict
     from datetime import datetime, timedelta, time
+    import pytz
 
     start_date, end_date = get_date_range(start_date, end_date)
     total_afk_per_counter = defaultdict(float)
@@ -192,7 +193,6 @@ def afk_duration(
         .all()
     )
 
-    # Gom log theo từng ghế
     from itertools import groupby
     grouped_by_seat = groupby(seat_logs, key=lambda log: log.seat_id)
 
@@ -206,16 +206,15 @@ def afk_duration(
             current_time = log.timestamp
             current_status = log.new_status
 
-            if prev_status == 0 and current_status == 1:
-                # AFK kết thúc
+            if prev_status is False and current_status is True:
                 afk_start = prev_time
                 afk_end = current_time
 
-                # Chỉ tính trong khung giờ hành chính
-                working_start = datetime.combine(afk_start.date(), time(7, 30))
-                working_end = datetime.combine(afk_end.date(), time(17, 30))
+                tz = afk_start.tzinfo or pytz.timezone("Asia/Ho_Chi_Minh")
 
-                # Cắt khoảng AFK trong giờ làm việc
+                working_start = tz.localize(datetime.combine(afk_start.date(), time(7, 30))) if afk_start.tzinfo is None else datetime.combine(afk_start.date(), time(7, 30)).replace(tzinfo=tz)
+                working_end = tz.localize(datetime.combine(afk_end.date(), time(17, 30))) if afk_end.tzinfo is None else datetime.combine(afk_end.date(), time(17, 30)).replace(tzinfo=tz)
+
                 effective_start = max(afk_start, working_start)
                 effective_end = min(afk_end, working_end)
 
