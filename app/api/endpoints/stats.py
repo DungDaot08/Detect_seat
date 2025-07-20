@@ -41,7 +41,7 @@ class WorkingTimeCheck(BaseModel):
     
 class AfkDuration(BaseModel):
     counter_id: int
-    total_afk_minutes: float
+    total_absent_minutes: float
 
 class AverageWaitingTime(BaseModel):
     counter_id: int
@@ -226,7 +226,7 @@ def afk_duration(
             prev_time = current_time
 
     return [
-        AfkDuration(counter_id=k, total_afk_minutes=v)
+        AfkDuration(counter_id=k, total_absent_minutes=v)
         for k, v in total_afk_per_counter.items()
     ]
 
