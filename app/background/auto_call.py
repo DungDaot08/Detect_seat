@@ -1,5 +1,5 @@
 import asyncio
-from datetime import datetime
+from datetime import datetime, time
 from app.database import SessionLocal
 from app.models import Counter, Ticket
 from app.api.endpoints.realtime import notify_frontend
@@ -11,6 +11,9 @@ async def check_and_call_next_for_counter(counter_id: int):
     db = SessionLocal()
     try:
         now = datetime.now(vn_tz)
+        today = now.date()
+        start_of_day = datetime.combine(today, time.min, tzinfo=vn_tz)
+        end_of_day = datetime.combine(today, time.max, tzinfo=vn_tz)
 
         counter = db.query(Counter).filter(Counter.id == counter_id).first()
         if not counter:
@@ -56,6 +59,8 @@ async def check_and_call_next_for_counter(counter_id: int):
                     Ticket.status == "waiting",
                     Ticket.counter_id == counter.id
                 )
+                .filter(Ticket.created_at >= start_of_day)
+                .filter(Ticket.created_at <= end_of_day)
                 .order_by(Ticket.created_at)
                 .first()
             )
