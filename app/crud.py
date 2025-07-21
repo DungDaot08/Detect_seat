@@ -129,6 +129,9 @@ def get_procedures_with_counters(db: Session, search: str = "") -> List[dict]:
 def call_next_ticket(db: Session, counter_id: int) -> Optional[Ticket]:
     # Kiểm tra xem quầy có tồn tại không
     now = datetime.now(vn_tz)
+    today = now.date()
+    start_of_day = datetime.combine(today, time.min, tzinfo=vn_tz)
+    end_of_day = datetime.combine(today, time.max, tzinfo=vn_tz)
     counter = db.query(Counter).filter(Counter.id == counter_id).first()
     if not counter:
         return None
@@ -152,6 +155,8 @@ def call_next_ticket(db: Session, counter_id: int) -> Optional[Ticket]:
         db.query(Ticket)
         .filter(Ticket.counter_id == counter_id)
         .filter(Ticket.status == "waiting")
+        .filter(Ticket.created_at >= start_of_day)
+        .filter(Ticket.created_at <= end_of_day)
         .order_by(Ticket.created_at)
         .first()
     )
