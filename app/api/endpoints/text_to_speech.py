@@ -1,10 +1,10 @@
-from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks
+from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks, Query
 from fastapi.responses import FileResponse
 from pydantic import BaseModel
 from gtts import gTTS
 from sqlalchemy.orm import Session
 import uuid, os
-from app import database, models
+from app import database, models, crud
 
 router = APIRouter()
 
@@ -20,8 +20,9 @@ class TTSRequest(BaseModel):
     ticket_number: int
 
 @router.post("/", response_class=FileResponse)
-def generate_tts(request: TTSRequest, background_tasks: BackgroundTasks, db: Session = Depends(get_db)):
-    counter = db.query(models.Counter).filter(models.Counter.id == request.counter_id).first()
+def generate_tts(request: TTSRequest, background_tasks: BackgroundTasks, tenxa: str = Query(...), db: Session = Depends(get_db)):
+    tenxa_id = crud.get_tenxa_id_from_slug(db, tenxa)
+    counter = db.query(models.Counter).filter(models.Counter.tenxa_id == tenxa_id).filter(models.Counter.id == request.counter_id).first()
     if not counter:
         raise HTTPException(status_code=404, detail="Counter not found")
     

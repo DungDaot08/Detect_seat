@@ -30,8 +30,8 @@ def get_password_hash(password: str) -> str:
     return pwd_context.hash(password)
 
 # --- AUTHENTICATE ---
-def authenticate_user(db: Session, username: str, password: str) -> Optional[models.User]:
-    user = db.query(models.User).filter(models.User.username == username).first()
+def authenticate_user(db: Session, tenxa_id: int, username: str, password: str) -> Optional[models.User]:
+    user = db.query(models.User).filter(models.User.tenxa_id == tenxa_id).filter(models.User.username == username).first()
     if not user or not verify_password(password, user.hashed_password):
         return None
     return user

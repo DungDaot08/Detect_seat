@@ -13,32 +13,41 @@ from pytz import timezone
 pwd_context = CryptContext(schemes=["pbkdf2_sha256"], deprecated="auto")
 vn_tz = timezone("Asia/Ho_Chi_Minh")
 
-def get_user_by_username(db: Session, username: str):
-    return db.query(models.User).filter(models.User.username == username).first()
+def get_tenxa_id_from_slug(db: Session, slug: str) -> Optional[int]:
+    tenxa = db.query(models.Tenxa).filter(models.Tenxa.slug == slug).first()
+    return tenxa.id if tenxa else None
 
-def create_user(db: Session, user: schemas.UserCreate):
+def get_slug_from_tenxa_id(db: Session, tenxa_id: int) ->Optional[str]:
+    tenxa = db.query(models.Tenxa).filter(models.Tenxa.id == tenxa_id).first()
+    return tenxa.slug if tenxa else None
+
+def get_user_by_username(db: Session, tenxa_id: int, username: str):
+    return db.query(models.User).filter(models.User.tenxa_id == tenxa_id).filter(models.User.username == username).first()
+
+def create_user(db: Session,tenxa_id: int, user: schemas.UserCreate):
     hashed_password = pwd_context.hash(user.password)
     db_user = models.User(
         username=user.username,
         hashed_password=hashed_password,
         full_name=user.full_name,
-        role=user.role
+        role=user.role,
+        tenxa_id=tenxa_id
     )
     db.add(db_user)
     db.commit()
     db.refresh(db_user)
     return db_user
 
-def authenticate_user(db: Session, username: str, password: str):
-    user = get_user_by_username(db, username)
+def authenticate_user(db: Session,tenxa_id: int, username: str, password: str):
+    user = get_user_by_username(db, tenxa_id, username)
     if not user or not pwd_context.verify(password, user.hashed_password):
         return None
     return user
-def get_procedures(db: Session, search: str = "") -> List[models.Procedure]:
+def get_procedures(db: Session, tenxa_id: int, search: str = "") -> List[models.Procedure]:
     if not search:
-        return db.query(models.Procedure).all()
+        return db.query(models.Procedure).filter(models.Procedure.tenxa_id == tenxa_id).all()
 
-    all_procedures = db.query(models.Procedure).all()
+    all_procedures = db.query(models.Procedure).filter(models.Procedure.tenxa_id == tenxa_id).all()
     results = []
 
     for proc in all_procedures:
@@ -50,7 +59,7 @@ def get_procedures(db: Session, search: str = "") -> List[models.Procedure]:
     results.sort(reverse=True, key=lambda x: x[0])
     return [proc for _, proc in results]
 
-def create_ticket(db: Session, ticket: schemas.TicketCreate) -> models.Ticket:
+def create_ticket(db: Session, tenxa_id: int, ticket: schemas.TicketCreate) -> models.Ticket:
     today = datetime.now(timezone("Asia/Ho_Chi_Minh")).date()
 
     start_of_day = datetime.combine(today, time.min)  # 00:00:00
@@ -58,7 +67,8 @@ def create_ticket(db: Session, ticket: schemas.TicketCreate) -> models.Ticket:
 
     latest = (
         db.query(models.Ticket)
-        .filter(models.Ticket.counter_id == ticket.counter_id)
+        .filter(models.Ticket.tenxa_id == tenxa_id)
+        #.filter(models.Ticket.counter_id == ticket.counter_id)
         .filter(models.Ticket.created_at >= start_of_day)
         .filter(models.Ticket.created_at <= end_of_day)
         .order_by(models.Ticket.number.desc())
@@ -69,7 +79,8 @@ def create_ticket(db: Session, ticket: schemas.TicketCreate) -> models.Ticket:
 
     db_ticket = models.Ticket(
         number=next_number,
-        counter_id=ticket.counter_id
+        counter_id=ticket.counter_id,
+        tenxa_id=tenxa_id
     )
     db.add(db_ticket)
     db.commit()
@@ -77,7 +88,7 @@ def create_ticket(db: Session, ticket: schemas.TicketCreate) -> models.Ticket:
     return db_ticket
 
 
-def get_waiting_tickets(db: Session, counter_id: Optional[int] = None):
+def get_waiting_tickets(db: Session, tenxa_id: int, counter_id: Optional[int] = None):
     #vn_tz = ZoneInfo("Asia/Ho_Chi_Minh")
     today = datetime.now(vn_tz).date()
 
@@ -88,14 +99,14 @@ def get_waiting_tickets(db: Session, counter_id: Optional[int] = None):
         models.Ticket.status == "waiting",
         models.Ticket.created_at >= start_of_day,
         models.Ticket.created_at <= end_of_day
-    )
+    ).filter(models.Ticket.tenxa_id == tenxa_id)
 
     if counter_id is not None:
         query = query.filter(models.Ticket.counter_id == counter_id)
 
     return query.order_by(models.Ticket.created_at.asc()).all()
-def get_procedures_with_counters(db: Session, search: str = "") -> List[dict]:
-    procedures = db.query(models.Procedure).all()
+def get_procedures_with_counters(db: Session, tenxa_id: int, search: str = "") -> List[dict]:
+    procedures = db.query(models.Procedure).filter(models.Procedure.tenxa_id == tenxa_id)
 
     results = []
 
@@ -126,13 +137,13 @@ def get_procedures_with_counters(db: Session, search: str = "") -> List[dict]:
     results.sort(key=lambda x: x["score"], reverse=True)
     return results
 
-def call_next_ticket(db: Session, counter_id: int) -> Optional[Ticket]:
+def call_next_ticket(db: Session, tenxa_id: int, counter_id: int) -> Optional[Ticket]:
     # Kiểm tra xem quầy có tồn tại không
     now = datetime.now(vn_tz)
     today = now.date()
     start_of_day = datetime.combine(today, time.min, tzinfo=vn_tz)
     end_of_day = datetime.combine(today, time.max, tzinfo=vn_tz)
-    counter = db.query(Counter).filter(Counter.id == counter_id).first()
+    counter = db.query(Counter).filter(Counter.id == counter_id).filter(Counter.tenxa_id == tenxa_id).first()
     if not counter:
         return None
     if counter.status != "active":
@@ -140,6 +151,7 @@ def call_next_ticket(db: Session, counter_id: int) -> Optional[Ticket]:
     
     current_ticket = (
         db.query(Ticket)
+        .filter(Ticket.tenxa_id == tenxa_id)
         .filter(Ticket.counter_id == counter_id)
         .filter(Ticket.status == "called")
         .order_by(Ticket.created_at)
@@ -153,6 +165,7 @@ def call_next_ticket(db: Session, counter_id: int) -> Optional[Ticket]:
     # Lấy vé tiếp theo theo quầy đó (giả định: theo thứ tự created_at)
     next_ticket = (
         db.query(Ticket)
+        .filter(Ticket.tenxa_id == tenxa_id)
         .filter(Ticket.counter_id == counter_id)
         .filter(Ticket.status == "waiting")
         .filter(Ticket.created_at >= start_of_day)
@@ -169,8 +182,8 @@ def call_next_ticket(db: Session, counter_id: int) -> Optional[Ticket]:
 
     return None
 
-def update_ticket_status(db: Session, ticket_id: int, status_update: schemas.TicketUpdateStatus):
-    ticket = db.query(models.Ticket).filter(models.Ticket.id == ticket_id).first()
+def update_ticket_status(db: Session, tenxa_id: int, ticket_id: int, status_update: schemas.TicketUpdateStatus):
+    ticket = db.query(models.Ticket).filter(models.Ticket.tenxa_id == tenxa_id).filter(models.Ticket.id == ticket_id).first()
     if not ticket:
         raise HTTPException(status_code=404, detail="Ticket not found")
 
@@ -179,7 +192,7 @@ def update_ticket_status(db: Session, ticket_id: int, status_update: schemas.Tic
     db.refresh(ticket)
     return ticket
 
-def pause_counter(db: Session, counter_id: int, reason: str):
+def pause_counter(db: Session, tenxa_id: int, counter_id: int, reason: str):
     now = datetime.now(vn_tz)  # hoặc datetime.now(vn_tz) nếu dùng múi giờ
 
     # ✅ Ghi log với thời gian bắt đầu
@@ -191,7 +204,7 @@ def pause_counter(db: Session, counter_id: int, reason: str):
     db.add(log)
 
     # ✅ Cập nhật trạng thái counter
-    counter = db.query(models.Counter).filter(models.Counter.id == counter_id).first()
+    counter = db.query(models.Counter).filter(models.Counter.tenxa_id == tenxa_id).filter(models.Counter.id == counter_id).first()
     if counter:
         counter.status = "paused"
         counter.reason = reason
@@ -200,10 +213,10 @@ def pause_counter(db: Session, counter_id: int, reason: str):
     db.refresh(log)
     return log
 
-def resume_counter(db: Session, counter_id: int):
+def resume_counter(db: Session, tenxa_id: int, counter_id: int):
     now = datetime.now(vn_tz)
 
-    counter = db.query(models.Counter).filter(models.Counter.id == counter_id).first()
+    counter = db.query(models.Counter).filter(models.Counter.tenxa_id == tenxa_id).filter(models.Counter.id == counter_id).first()
     if not counter:
         return None
 
@@ -214,6 +227,7 @@ def resume_counter(db: Session, counter_id: int):
             models.CounterPauseLog.counter_id == counter_id,
             models.CounterPauseLog.end_time == None
         )
+        .filter(models.CounterPauseLog.tenxa_id == tenxa_id)
         .order_by(models.CounterPauseLog.start_time.desc())
         .first()
     )
@@ -229,24 +243,25 @@ def resume_counter(db: Session, counter_id: int):
     db.refresh(counter)
     return counter
 
-def get_user_by_username(db: Session, username: str):
-    return db.query(models.User).filter(models.User.username == username).first()
+def get_user_by_username(db: Session, tenxa_id: int, username: str):
+    return db.query(models.User).filter(models.User.tenxa_id == tenxa_id).filter(models.User.username == username).first()
 
-def create_user(db: Session, user: schemas.UserCreate):
+def create_user(db: Session, tenxa_id: int, user: schemas.UserCreate):
     hashed_password = auth.hash_password(user.password)
     db_user = models.User(
         username=user.username, 
         hashed_password=hashed_password,
         full_name=user.full_name, 
         role=user.role,
+        tenxa_id=tenxa_id,
         counter_id=user.counter_id if user.role == "officer" else None)
     db.add(db_user)
     db.commit()
     db.refresh(db_user)
     return db_user
 
-def authenticate_user(db: Session, username: str, password: str):
-    user = get_user_by_username(db, username)
+def authenticate_user(db: Session, tenxa_id: int, username: str, password: str):
+    user = get_user_by_username(db, tenxa_id, username)
     if not user:
         return None
     if not auth.verify_password(password, user.hashed_password):

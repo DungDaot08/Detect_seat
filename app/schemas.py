@@ -76,6 +76,7 @@ class SeatPublic(BaseModel):
 class CalledTicket(BaseModel):
     number: int
     counter_name: str
+    tenxa: str
     class Config:
         orm_mode = True
 

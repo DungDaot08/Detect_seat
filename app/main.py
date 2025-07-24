@@ -18,10 +18,10 @@ async def lifespan(app: FastAPI):
     db = SessionLocal()
     try:
         # 🔍 Truy vấn tất cả counter_id từ database
-        counter_ids = [c.id for c in db.query(Counter.id).all()]
+        counter_ids = db.query(Counter.id, Counter.tenxa_id).all()
     finally:
         db.close()
-    tasks = [asyncio.create_task(auto_call_loop_for_counter(counter_id)) for counter_id in counter_ids]
+    tasks = [asyncio.create_task(auto_call_loop_for_counter(counter_id, tenxa_id)) for counter_id, tenxa_id in counter_ids]
 
     yield
 
