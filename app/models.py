@@ -7,7 +7,8 @@ import enum
 class Field(Base):
     __tablename__ = "fields"
 
-    id = Column(Integer, primary_key=True, index=True)
+    code = Column(Integer, primary_key=True, index=True)
+    id = Column(Integer)
     name = Column(String, nullable=False)
     tenxa_id = Column(Integer, ForeignKey("tenxa.id"), nullable=False)
 
@@ -43,7 +44,8 @@ class Ticket(Base):
 class Counter(Base):
     __tablename__ = "counters"
 
-    id = Column(Integer, primary_key=True, index=True)
+    code = Column(Integer, primary_key=True, index=True)
+    id = Column(Integer)
     name = Column(String, nullable=False)
     timeout_seconds = Column(Integer, default=60)
     status = Column(String(20), nullable=False, default="active")

@@ -32,6 +32,10 @@ async def check_and_call_next_for_counter(counter_id: int, tenxa_id: int):
 
         if officer_seat is None or client_seat is None:
             return
+        
+        if officer_seat.tenxa_id != tenxa_id or client_seat.tenxa_id != tenxa_id:
+            print(f"❌ Seat không thuộc xã {tenxa_id}")
+            return
 
         if not officer_seat.status:
             print(f"⚠️ Không có cán bộ ngồi tại quầy {counter.name} xã {tenxa_id}")
