@@ -6,6 +6,9 @@ from sqlalchemy.orm import Session
 from app.models import Ticket, SeatLog, Seat  # assuming these are your SQLAlchemy models
 from sqlalchemy import func, and_, or_
 from app import crud, schemas, database
+from collections import defaultdict
+from datetime import datetime, timedelta, time
+import pytz
 
 #app = FastAPI()
 router = APIRouter()
@@ -65,13 +68,16 @@ def get_date_range(start: Optional[date], end: Optional[date]):
 def tickets_per_counter(
     start_date: Optional[date] = Query(None),
     end_date: Optional[date] = Query(None),
+    tenxa: str = Query(...),
     db: Session = Depends(get_db),
 ):
+    tenxa_id = crud.get_tenxa_id_from_slug(db, tenxa)
     print("start_date:", start_date, "end_date:", end_date)
     start, end = get_date_range(start_date, end_date)
     result = (
         db.query(Ticket.counter_id, func.count().label("total_tickets"))
         .filter(func.date(Ticket.created_at) >= start, func.date(Ticket.created_at) <= end)
+        .filter(Ticket.tenxa_id == tenxa_id)
         .group_by(Ticket.counter_id)
         .all()
     )
@@ -85,8 +91,10 @@ def tickets_per_counter(
 def attended_tickets(
     start_date: Optional[date] = Query(None),
     end_date: Optional[date] = Query(None),
+    tenxa: str = Query(...),
     db: Session = Depends(get_db),
 ):
+    tenxa_id = crud.get_tenxa_id_from_slug(db, tenxa)
     start, end = get_date_range(start_date, end_date)
     result = (
         db.query(Ticket.counter_id, func.count().label("attended_tickets"))
@@ -96,6 +104,7 @@ def attended_tickets(
             func.date(Ticket.created_at) >= start,
             func.date(Ticket.created_at) <= end,
         )
+        .filter(Ticket.tenxa_id == tenxa_id)
         .group_by(Ticket.counter_id)
         .all()
     )
@@ -110,14 +119,17 @@ def attended_tickets(
 def average_handling_time(
     start_date: Optional[date] = Query(None),
     end_date: Optional[date] = Query(None),
+    tenxa: str = Query(...),
     db: Session = Depends(get_db),
 ):
+    tenxa_id = crud.get_tenxa_id_from_slug(db, tenxa)
     start, end = get_date_range(start_date, end_date)
     result = (
         db.query(
             Ticket.counter_id,
             func.avg(func.extract("epoch", Ticket.finished_at - Ticket.called_at)).label("avg_handling_time_seconds")
         )
+        .filter(Ticket.tenxa_id == tenxa_id)
         .filter(
             Ticket.called_at.isnot(None),
             Ticket.finished_at.isnot(None),
@@ -137,8 +149,10 @@ def average_handling_time(
 @router.get("/working-time-check", response_model=List[WorkingTimeCheck])
 def working_time_check(
     date_check: Optional[date] = Query(None),
+    tenxa: str = Query(...),
     db: Session = Depends(get_db),
 ):
+    tenxa_id = crud.get_tenxa_id_from_slug(db, tenxa)
     date_check = date_check or date.today()
     result = []
 
@@ -148,6 +162,7 @@ def working_time_check(
             func.min(SeatLog.timestamp).label("first_checkin")
         )
         .join(Seat, Seat.id == SeatLog.seat_id)
+        .filter(SeatLog.tenxa_id == tenxa_id)
         .filter(
             SeatLog.new_status == True,  # Có mặt
             func.date(SeatLog.timestamp) == date_check
@@ -172,11 +187,10 @@ def working_time_check(
 def afk_duration(
     start_date: Optional[date] = Query(None),
     end_date: Optional[date] = Query(None),
+    tenxa: str = Query(...),
     db: Session = Depends(get_db),
 ):
-    from collections import defaultdict
-    from datetime import datetime, timedelta, time
-    import pytz
+    tenxa_id = crud.get_tenxa_id_from_slug(db, tenxa)
 
     start_date, end_date = get_date_range(start_date, end_date)
     total_afk_per_counter = defaultdict(float)
@@ -184,6 +198,7 @@ def afk_duration(
     seat_logs = (
         db.query(SeatLog)
         .join(Seat, SeatLog.seat_id == Seat.id)
+        .filter(SeatLog.tenxa_id == tenxa_id)
         .filter(
             func.date(SeatLog.timestamp) >= start_date,
             func.date(SeatLog.timestamp) <= end_date,
@@ -234,8 +249,10 @@ def afk_duration(
 def average_waiting_time(
     start_date: Optional[date] = Query(None),
     end_date: Optional[date] = Query(None),
+    tenxa: str = Query(...),
     db: Session = Depends(get_db),
 ):
+    tenxa_id = crud.get_tenxa_id_from_slug(db, tenxa)
     start, end = get_date_range(start_date, end_date)
 
     result = (
@@ -249,6 +266,7 @@ def average_waiting_time(
             func.date(Ticket.created_at) >= start,
             func.date(Ticket.created_at) <= end,
         )
+        .filter(Ticket.tenxa_id == tenxa_id)
         .group_by(Ticket.counter_id)
         .all()
     )
