@@ -55,7 +55,7 @@ class Counter(Base):
     seats = relationship("Seat", back_populates="counter", cascade="all, delete")
     tickets = relationship("Ticket", back_populates="counter", cascade="all, delete")
     users = relationship("User", back_populates="counter")
-    tenxa = relationship("Tenxa")
+    tenxa = relationship("Tenxa", back_populates="counters")
 
 class CounterField(Base):
     __tablename__ = "counter_field"
@@ -142,3 +142,4 @@ class Tenxa(Base):
     id = Column(Integer, primary_key=True, index=True)
     name = Column(String, nullable=False)
     slug = Column(String, unique=True, index=True, nullable=False)
+    auto_call = Column(Boolean, default=False)

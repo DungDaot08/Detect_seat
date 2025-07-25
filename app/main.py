@@ -6,7 +6,7 @@ import asyncio
 from app.api.endpoints import procedures, tickets, seats, counters, users, realtime, text_to_speech, stats
 from app.database import engine, Base, SessionLocal
 #from app.background.auto_call import check_and_call_next
-from app.models import Counter
+from app.models import Counter, Tenxa
 from app.utils.auto_call_loop import auto_call_loop_for_counter
 
 # ✅ Khởi tạo DB
@@ -18,10 +18,10 @@ async def lifespan(app: FastAPI):
     db = SessionLocal()
     try:
         # 🔍 Truy vấn tất cả counter_id từ database
-        counter_ids = db.query(Counter.id, Counter.tenxa_id).all()
+        counter_info = db.query(Counter.id, Counter.tenxa_id).join(Tenxa, Counter.tenxa_id == Tenxa.id).filter(Tenxa.auto_call == True).all()
     finally:
         db.close()
-    tasks = [asyncio.create_task(auto_call_loop_for_counter(counter_id, tenxa_id)) for counter_id, tenxa_id in counter_ids]
+    tasks = [asyncio.create_task(auto_call_loop_for_counter(counter_id, tenxa_id)) for counter_id, tenxa_id in counter_info]
 
     yield
 
