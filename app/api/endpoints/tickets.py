@@ -46,6 +46,16 @@ def get_waiting_tickets(
     
     return crud.get_waiting_tickets(db, tenxa_id, counter_id)
 
+@router.get("/called", response_model=List[schemas.Ticket])
+def get_waiting_tickets(
+    counter_id: Optional[int] = Query(None, description="ID của quầy (tùy chọn)"),
+    tenxa: str = Query(...),
+    db: Session = Depends(get_db)
+):
+    tenxa_id = crud.get_tenxa_id_from_slug(db, tenxa)
+    
+    return crud.get_called_tickets(db, tenxa_id, counter_id)
+
 @router.put("/{ticket_id}/status", response_model=schemas.Ticket)
 def update_ticket_status(ticket_id: int, status_update: schemas.TicketUpdateStatus, tenxa: str = Query(...), db: Session = Depends(get_db)):
     tenxa_id = crud.get_tenxa_id_from_slug(db, tenxa)

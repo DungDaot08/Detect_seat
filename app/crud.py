@@ -105,6 +105,24 @@ def get_waiting_tickets(db: Session, tenxa_id: int, counter_id: Optional[int] = 
         query = query.filter(models.Ticket.counter_id == counter_id)
 
     return query.order_by(models.Ticket.created_at.asc()).all()
+
+def get_called_tickets(db: Session, tenxa_id: int, counter_id: Optional[int] = None):
+    #vn_tz = ZoneInfo("Asia/Ho_Chi_Minh")
+    today = datetime.now(vn_tz).date()
+
+    start_of_day = datetime.combine(today, time.min, tzinfo=vn_tz)
+    end_of_day = datetime.combine(today, time.max, tzinfo=vn_tz)
+
+    query = db.query(models.Ticket).filter(
+        models.Ticket.status == "called",
+        models.Ticket.created_at >= start_of_day,
+        models.Ticket.created_at <= end_of_day
+    ).filter(models.Ticket.tenxa_id == tenxa_id)
+
+    if counter_id is not None:
+        query = query.filter(models.Ticket.counter_id == counter_id)
+
+    return query.order_by(models.Ticket.created_at.asc()).all()
 def get_procedures_with_counters(db: Session, tenxa_id: int, search: str = "") -> List[dict]:
     procedures = db.query(models.Procedure).filter(models.Procedure.tenxa_id == tenxa_id)
 
