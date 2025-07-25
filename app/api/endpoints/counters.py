@@ -33,7 +33,7 @@ def call_next_manually(
                 "event": "ticket_called",
                 "ticket_number": ticket.number,
                 "counter_name": ticket.counter.name,
-                "ten_xa": tenxa,
+                "tenxa": tenxa,
                 "timestamp": vn_time
             }
         )
