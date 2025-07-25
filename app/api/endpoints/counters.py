@@ -24,6 +24,10 @@ def call_next_manually(
     check_counter_permission(counter_id, current_user)
 
     ticket = crud.call_next_ticket(db, tenxa_id, counter_id)
+    counter = db.query(Counter).filter(
+    Counter.id == ticket.counter_id,
+    Counter.tenxa_id == tenxa_id
+    ).first()
     if ticket:
         # ✅ Gửi sự kiện WebSocket qua background task
         vn_time = datetime.now(pytz.timezone("Asia/Ho_Chi_Minh")).isoformat()
@@ -32,7 +36,7 @@ def call_next_manually(
             {
                 "event": "ticket_called",
                 "ticket_number": ticket.number,
-                "counter_name": ticket.counter.name,
+                "counter_name": counter.name,
                 "tenxa": tenxa,
                 "timestamp": vn_time
             }
