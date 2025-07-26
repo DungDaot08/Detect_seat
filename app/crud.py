@@ -136,12 +136,13 @@ def get_procedures_with_counters(db: Session, tenxa_id: int, search: str = "") -
             # Tìm các quầy phục vụ thủ tục này thông qua bảng trung gian CounterField
             counter_ids = (
                 db.query(models.CounterField.counter_id)
+                .filter(models.CounterField.tenxa_id == tenxa_id)
                 .filter(models.CounterField.field_id == proc.field_id)
                 .distinct()
                 .all()
             )
             # Lấy thông tin quầy
-            counters = db.query(models.Counter).filter(models.Counter.id.in_([c[0] for c in counter_ids])).all()
+            counters = db.query(models.Counter).filter(models.Counter.tenxa_id == tenxa_id).filter(models.Counter.id.in_([c[0] for c in counter_ids])).all()
 
             results.append({
                 "id": proc.id,
