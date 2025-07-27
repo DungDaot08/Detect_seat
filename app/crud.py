@@ -124,7 +124,7 @@ def get_called_tickets(db: Session, tenxa_id: int, counter_id: Optional[int] = N
 
     return query.order_by(models.Ticket.created_at.asc()).all()
 def get_procedures_with_counters(db: Session, tenxa_id: int, search: str = "") -> List[dict]:
-    procedures = db.query(models.Procedure).filter(models.Procedure.tenxa_id == tenxa_id)
+    procedures = db.query(models.Procedure).filter(models.Procedure.tenxa_id == tenxa_id).all()
 
     results = []
 
@@ -218,7 +218,8 @@ def pause_counter(db: Session, tenxa_id: int, counter_id: int, reason: str):
     log = models.CounterPauseLog(
         counter_id=counter_id,
         reason=reason,
-        start_time=now
+        start_time=now,
+        tenxa_id=tenxa_id
     )
     db.add(log)
 
@@ -227,6 +228,7 @@ def pause_counter(db: Session, tenxa_id: int, counter_id: int, reason: str):
     if counter:
         counter.status = "paused"
         counter.reason = reason
+        
 
     db.commit()
     db.refresh(log)
