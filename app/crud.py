@@ -123,7 +123,7 @@ def get_called_tickets(db: Session, tenxa_id: int, counter_id: Optional[int] = N
         query = query.filter(models.Ticket.counter_id == counter_id)
 
     return query.order_by(models.Ticket.created_at.asc()).all()
-def get_procedures_with_counters(db: Session, tenxa_id: int, search: str = "") -> List[dict]:
+def get_procedures_with_counters1(db: Session, tenxa_id: int, search: str = "") -> List[dict]:
     procedures = db.query(models.Procedure).filter(models.Procedure.tenxa_id == tenxa_id).all()
 
     results = []
@@ -132,7 +132,7 @@ def get_procedures_with_counters(db: Session, tenxa_id: int, search: str = "") -
         # Tính điểm fuzzy so khớp tên thủ tục
         score = fuzz.partial_ratio(search.lower(), proc.name.lower()) if search else 100
 
-        if score >= 90:
+        if score >= 80:
             # Tìm các quầy phục vụ thủ tục này thông qua bảng trung gian CounterField
             counter_ids = (
                 db.query(models.CounterField.counter_id)
@@ -153,6 +153,50 @@ def get_procedures_with_counters(db: Session, tenxa_id: int, search: str = "") -
             })
 
     # Sắp xếp kết quả theo độ giống giảm dần
+    results.sort(key=lambda x: x["score"], reverse=True)
+    return results
+
+def get_procedures_with_counters(db: Session, tenxa_id: int, search: str = "") -> List[dict]:
+    procedures = db.query(models.Procedure).filter(models.Procedure.tenxa_id == tenxa_id).all()
+
+    # Tạo danh sách field_id từ procedures để truy 1 lần CounterField
+    field_ids = list(set([p.field_id for p in procedures]))
+    
+    # Truy vấn tất cả CounterField liên quan
+    counterfield_map = db.query(models.CounterField).filter(
+        models.CounterField.tenxa_id == tenxa_id,
+        models.CounterField.field_id.in_(field_ids)
+    ).all()
+    
+    # Tạo mapping từ field_id -> set(counter_id)
+    field_to_counters = {}
+    for cf in counterfield_map:
+        field_to_counters.setdefault(cf.field_id, set()).add(cf.counter_id)
+    
+    # Lấy tất cả counter_id cần dùng
+    all_counter_ids = {cid for cids in field_to_counters.values() for cid in cids}
+    counters = db.query(models.Counter).filter(
+        models.Counter.tenxa_id == tenxa_id,
+        models.Counter.id.in_(all_counter_ids)
+    ).all()
+    counter_dict = {c.id: {"id": c.id, "name": c.name} for c in counters}
+
+    results = []
+
+    for proc in procedures:
+        score = fuzz.token_set_ratio(search.lower(), proc.name.lower()) if search else 100
+        if score >= 80:
+            counter_ids = field_to_counters.get(proc.field_id, [])
+            matched_counters = [counter_dict[cid] for cid in counter_ids if cid in counter_dict]
+
+            results.append({
+                "id": proc.id,
+                "name": proc.name,
+                "field_id": proc.field_id,
+                "score": score,
+                "counters": matched_counters
+            })
+
     results.sort(key=lambda x: x["score"], reverse=True)
     return results
 
