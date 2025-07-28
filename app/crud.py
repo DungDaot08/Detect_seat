@@ -154,7 +154,7 @@ def get_procedures_with_counters1(db: Session, tenxa_id: int, search: str = "") 
 
     # Sắp xếp kết quả theo độ giống giảm dần
     results.sort(key=lambda x: x["score"], reverse=True)
-    return results
+    return results[:5]
 
 def get_procedures_with_counters(db: Session, tenxa_id: int, search: str = "") -> List[dict]:
     procedures = db.query(models.Procedure).filter(models.Procedure.tenxa_id == tenxa_id).all()
