@@ -185,7 +185,7 @@ def get_procedures_with_counters(db: Session, tenxa_id: int, search: str = "") -
 
     for proc in procedures:
         score = fuzz.token_set_ratio(search.lower(), proc.name.lower()) if search else 100
-        if score >= 80:
+        if score >= 60:
             counter_ids = field_to_counters.get(proc.field_id, [])
             matched_counters = [counter_dict[cid] for cid in counter_ids if cid in counter_dict]
 
