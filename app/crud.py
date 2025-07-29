@@ -59,7 +59,7 @@ def get_procedures(db: Session, tenxa_id: int, search: str = "") -> List[models.
     results.sort(reverse=True, key=lambda x: x[0])
     return [proc for _, proc in results]
 
-def create_ticket(db: Session, tenxa_id: int, ticket: schemas.TicketCreate) -> models.Ticket:
+def create_ticket_old(db: Session, tenxa_id: int, ticket: schemas.TicketCreate) -> models.Ticket:
     today = datetime.now(timezone("Asia/Ho_Chi_Minh")).date()
 
     start_of_day = datetime.combine(today, time.min)  # 00:00:00
@@ -71,6 +71,52 @@ def create_ticket(db: Session, tenxa_id: int, ticket: schemas.TicketCreate) -> m
         #.filter(models.Ticket.counter_id == ticket.counter_id)
         .filter(models.Ticket.created_at >= start_of_day)
         .filter(models.Ticket.created_at <= end_of_day)
+        .order_by(models.Ticket.number.desc())
+        .first()
+    )
+
+    next_number = 1 if not latest else latest.number + 1
+
+    db_ticket = models.Ticket(
+        number=next_number,
+        counter_id=ticket.counter_id,
+        tenxa_id=tenxa_id
+    )
+    db.add(db_ticket)
+    db.commit()
+    db.refresh(db_ticket)
+    return db_ticket
+
+from datetime import datetime, time, timedelta
+from pytz import timezone
+
+def create_ticket(db: Session, tenxa_id: int, ticket: schemas.TicketCreate) -> models.Ticket:
+    now = datetime.now(timezone("Asia/Ho_Chi_Minh"))
+
+    if tenxa_id == 2:
+        # Reset vé lúc 17:30 hôm nay
+        reset_time = datetime.combine(now.date(), time(17, 30, 0), tzinfo=timezone("Asia/Ho_Chi_Minh"))
+
+        if now < reset_time:
+            # Nếu chưa đến 17:30, thì lấy mốc reset từ hôm qua
+            start_of_range = reset_time - timedelta(days=1)
+            end_of_range = reset_time
+        else:
+            # Nếu sau 17:30, thì lấy từ 17:30 hôm nay đến 17:30 ngày mai
+            start_of_range = reset_time
+            end_of_range = reset_time + timedelta(days=1)
+    else:
+        # Xã khác: reset từ 00:00 đến 23:59 cùng ngày
+        today = now.date()
+        start_of_range = datetime.combine(today, time.min, tzinfo=timezone("Asia/Ho_Chi_Minh"))
+        end_of_range = datetime.combine(today, time.max, tzinfo=timezone("Asia/Ho_Chi_Minh"))
+
+    # Tìm vé mới nhất trong khoảng thời gian áp dụng
+    latest = (
+        db.query(models.Ticket)
+        .filter(models.Ticket.tenxa_id == tenxa_id)
+        .filter(models.Ticket.created_at >= start_of_range)
+        .filter(models.Ticket.created_at <= end_of_range)
         .order_by(models.Ticket.number.desc())
         .first()
     )
@@ -185,7 +231,7 @@ def get_procedures_with_counters(db: Session, tenxa_id: int, search: str = "") -
 
     for proc in procedures:
         score = fuzz.token_set_ratio(search.lower(), proc.name.lower()) if search else 100
-        if score >= 60:
+        if score >= 10:
             counter_ids = field_to_counters.get(proc.field_id, [])
             matched_counters = [counter_dict[cid] for cid in counter_ids if cid in counter_dict]
 
