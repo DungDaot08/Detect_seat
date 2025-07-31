@@ -47,7 +47,7 @@ from fastapi import APIRouter, BackgroundTasks, Query, Depends, HTTPException
 from fastapi.responses import FileResponse
 from sqlalchemy.orm import Session
 from app import crud, models
-from app.schemas import TTSRequest
+#from app.schemas import TTSRequest
 from app.database import get_db
 
 router = APIRouter()
