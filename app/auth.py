@@ -13,7 +13,7 @@ from app import models, schemas, database
 # --- CONFIG ---
 SECRET_KEY = "your-secret-key"  # Thay bằng biến môi trường khi production
 ALGORITHM = "HS256"
-ACCESS_TOKEN_EXPIRE_MINUTES = 60
+ACCESS_TOKEN_EXPIRE_MINUTES = 1440
 
 # --- PASSWORD HASHING ---
 pwd_context = CryptContext(schemes=["pbkdf2_sha256"], deprecated="auto")
