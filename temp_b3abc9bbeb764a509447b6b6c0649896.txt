@@ -1,0 +1,3 @@
+file 'D:\Detect-seat\kiosk_api\app\utils\TTS\prefix\prefix.mp3'
+file 'D:\Detect-seat\kiosk_api\app\utils\TTS\numbers\3.mp3'
+file 'D:\Detect-seat\kiosk_api\app\utils\TTS\counter_audio\Quay1_xa2.mp3'
