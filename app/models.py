@@ -143,3 +143,16 @@ class Tenxa(Base):
     name = Column(String, nullable=False)
     slug = Column(String, unique=True, index=True, nullable=False)
     auto_call = Column(Boolean, default=False)
+    
+from sqlalchemy import Column, Integer, LargeBinary, DateTime
+from sqlalchemy.sql import func
+from app.database import Base
+
+class TTSAudio(Base):
+    __tablename__ = "tts_audio"
+
+    id = Column(Integer, primary_key=True, index=True)
+    tenxa_id = Column(Integer, nullable=False)
+    counter_id = Column(Integer, nullable=False)
+    audio_data = Column(LargeBinary, nullable=False)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
