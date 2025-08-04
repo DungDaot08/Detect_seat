@@ -121,3 +121,13 @@ class UserLogin(BaseModel):
 class Token(BaseModel):
     access_token: str
     token_type: str
+    
+class FooterBase(BaseModel):
+    work_time: str
+    hotline: str
+
+class FooterCreate(FooterBase):
+    pass
+
+class FooterResponse(FooterBase):
+    tenxa: str
