@@ -156,3 +156,13 @@ class TTSAudio(Base):
     counter_id = Column(Integer, nullable=False)
     audio_data = Column(LargeBinary, nullable=False)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
+    
+class Footer(Base):
+    __tablename__ = "footers"
+
+    id = Column(Integer, primary_key=True, index=True)
+    tenxa_id = Column(Integer, ForeignKey("tenxa.id"), unique=True, nullable=False)
+    work_time = Column(String, nullable=True)
+    hotline = Column(String, nullable=True)
+
+    tenxa = relationship("Tenxa")  # nếu bạn có bảng `tenxa`
