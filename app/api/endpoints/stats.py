@@ -3,12 +3,16 @@ from pydantic import BaseModel
 from typing import List, Optional
 from datetime import date, datetime
 from sqlalchemy.orm import Session
-from app.models import Ticket, SeatLog, Seat  # assuming these are your SQLAlchemy models
+from app.models import Ticket, SeatLog, Seat, Counter  # assuming these are your SQLAlchemy models
 from sqlalchemy import func, and_, or_
 from app import crud, schemas, database
 from collections import defaultdict
 from datetime import datetime, timedelta, time
 import pytz
+from fastapi.responses import StreamingResponse
+from io import BytesIO
+import openpyxl
+from openpyxl.styles import Font
 
 #app = FastAPI()
 router = APIRouter()
@@ -275,3 +279,65 @@ def average_waiting_time(
         AverageWaitingTime(counter_id=row[0], avg_waiting_time_seconds=row[1])
         for row in result
     ]
+
+@router.get("/export/ticket-report")
+def export_ticket_report(
+    start_date: Optional[date] = Query(None),
+    end_date: Optional[date] = Query(None),
+    tenxa: str = Query(...),
+    format: str = Query("excel", regex="^(excel|pdf)$"),
+    db: Session = Depends(get_db),
+):
+    tenxa_id = crud.get_tenxa_id_from_slug(db, tenxa)
+    start, end = get_date_range(start_date, end_date)
+
+    # Query vé đã tiếp đón
+    tickets = (
+        db.query(Ticket)
+        .filter(
+            Ticket.tenxa_id == tenxa_id,
+            Ticket.called_at.isnot(None),
+            Ticket.finished_at.isnot(None),
+            func.date(Ticket.created_at) >= start,
+            func.date(Ticket.created_at) <= end,
+        )
+        .order_by(Ticket.created_at)
+        .all()
+    )
+
+    # Tạo file Excel
+    wb = openpyxl.Workbook()
+    ws = wb.active
+    ws.title = "Ticket Report"
+
+    headers = [
+        "Quầy",
+        "Số vé",
+        "Thời điểm in vé",
+        "Thời điểm tiếp đón",
+        "Tổng thời gian tiếp đón (phút)",
+        "Cảnh báo (>15 phút)",
+    ]
+    ws.append(headers)
+    for cell in ws[1]:
+        cell.font = Font(bold=True)
+
+    for ticket in tickets:
+        duration_minutes = (ticket.finished_at - ticket.called_at).total_seconds() / 60
+        warning = "⚠️" if duration_minutes > 15 else ""
+        ws.append([
+            ticket.counter_id,
+            ticket.number,
+            ticket.created_at.strftime("%Y-%m-%d %H:%M"),
+            ticket.called_at.strftime("%Y-%m-%d %H:%M"),
+            round(duration_minutes, 2),
+            warning,
+        ])
+
+    # Trả file về client
+    output = BytesIO()
+    wb.save(output)
+    output.seek(0)
+
+    filename = f"ticket_report_{tenxa}_{start}_{end}.xlsx"
+    return StreamingResponse(output, media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", headers={"Content-Disposition": f"attachment; filename={filename}"})
