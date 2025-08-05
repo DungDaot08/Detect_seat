@@ -93,7 +93,7 @@ from pytz import timezone
 def create_ticket(db: Session, tenxa_id: int, ticket: schemas.TicketCreate) -> models.Ticket:
     now = datetime.now(timezone("Asia/Ho_Chi_Minh"))
 
-    if tenxa_id == 2:
+    if tenxa_id == 0:
         # Reset vé lúc 17:30 hôm nay
         reset_time = datetime.combine(now.date(), time(17, 30, 0), tzinfo=timezone("Asia/Ho_Chi_Minh"))
 
