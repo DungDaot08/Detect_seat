@@ -291,12 +291,42 @@ def call_next_ticket(db: Session, tenxa_id: int, counter_id: int) -> Optional[Ti
 
     return None
 
-def update_ticket_status(db: Session, tenxa_id: int, ticket_id: int, status_update: schemas.TicketUpdateStatus):
-    ticket = db.query(models.Ticket).filter(models.Ticket.tenxa_id == tenxa_id).filter(models.Ticket.id == ticket_id).first()
+def update_ticket_status_old(db: Session, tenxa_id: int, ticket_number: int, status_update: schemas.TicketUpdateStatus):
+    ticket = db.query(models.Ticket).filter(models.Ticket.tenxa_id == tenxa_id).filter(models.Ticket.number == ticket_number).first()
     if not ticket:
         raise HTTPException(status_code=404, detail="Ticket not found")
 
     ticket.status = status_update.status
+    db.commit()
+    db.refresh(ticket)
+    return ticket
+
+def update_ticket_status(
+    db: Session,
+    tenxa_id: int,
+    ticket_number: int,
+    status_update: schemas.TicketUpdateStatus
+):
+    ticket = db.query(models.Ticket).filter(
+        models.Ticket.tenxa_id == tenxa_id,
+        models.Ticket.number == ticket_number
+    ).first()
+
+    if not ticket:
+        raise HTTPException(status_code=404, detail="Ticket not found")
+
+    # ✅ Kiểm tra ngày tạo vé có phải hôm nay không (theo múi giờ VN)
+    now = datetime.now(vn_tz)
+    if ticket.created_at.astimezone(vn_tz).date() != now.date():
+        raise HTTPException(status_code=400, detail="Chỉ được cập nhật vé tạo trong ngày hôm nay")
+
+    # ✅ Cập nhật trạng thái
+    ticket.status = status_update.status
+
+    # ✅ Nếu trạng thái là "done", cập nhật thời điểm hoàn tất
+    if status_update.status.lower() == "done":
+        ticket.finished_at = now
+
     db.commit()
     db.refresh(ticket)
     return ticket

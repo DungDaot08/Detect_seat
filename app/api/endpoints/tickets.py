@@ -56,8 +56,8 @@ def get_called_tickets(
     
     return crud.get_called_tickets(db, tenxa_id, counter_id)
 
-@router.put("/{ticket_id}/status", response_model=schemas.Ticket)
-def update_ticket_status(ticket_id: int, status_update: schemas.TicketUpdateStatus, tenxa: str = Query(...), db: Session = Depends(get_db)):
+@router.put("/update_status", response_model=schemas.Ticket)
+def update_ticket_status(ticket_number: int, status_update: schemas.TicketUpdateStatus, tenxa: str = Query(...), db: Session = Depends(get_db)):
     tenxa_id = crud.get_tenxa_id_from_slug(db, tenxa)
     
-    return crud.update_ticket_status(db, tenxa_id, ticket_id, status_update)
+    return crud.update_ticket_status(db, tenxa_id, ticket_number, status_update)
