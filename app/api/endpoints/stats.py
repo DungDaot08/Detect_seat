@@ -74,6 +74,7 @@ def tickets_per_counter(
     tenxa_id = crud.get_tenxa_id_from_slug(db, tenxa)
     print("start_date:", start_date, "end_date:", end_date)
     start, end = get_date_range(start_date, end_date)
+
     result = (
         db.query(Ticket.counter_id, func.count().label("total_tickets"))
         .filter(func.date(Ticket.created_at) >= start, func.date(Ticket.created_at) <= end)
@@ -81,11 +82,18 @@ def tickets_per_counter(
         .group_by(Ticket.counter_id)
         .all()
     )
-    # Chuyển tuple thành dict để khớp với schema
-    return [
+
+    items = [
         TicketsPerCounter(counter_id=row[0], total_tickets=row[1])
         for row in result
     ]
+
+    # ✅ Tính tổng tất cả vé
+    total = sum(row[1] for row in result)
+    items.append(TicketsPerCounter(counter_id="Tổng", total_tickets=total))
+
+    return items
+
 
 @router.get("/attended-tickets", response_model=List[AttendedTickets])
 def attended_tickets(
@@ -96,6 +104,7 @@ def attended_tickets(
 ):
     tenxa_id = crud.get_tenxa_id_from_slug(db, tenxa)
     start, end = get_date_range(start_date, end_date)
+
     result = (
         db.query(Ticket.counter_id, func.count().label("attended_tickets"))
         .filter(
@@ -109,10 +118,17 @@ def attended_tickets(
         .all()
     )
 
-    return [
+    items = [
         AttendedTickets(counter_id=row[0], attended_tickets=row[1])
         for row in result
     ]
+
+    # ✅ Thêm dòng tổng
+    total = sum(row[1] for row in result)
+    items.append(AttendedTickets(counter_id="Tổng", attended_tickets=total))
+
+    return items
+
 
 
 @router.get("/average-handling-time", response_model=List[AverageHandlingTime])
@@ -127,7 +143,7 @@ def average_handling_time(
     result = (
         db.query(
             Ticket.counter_id,
-            func.avg(func.extract("epoch", Ticket.finished_at - Ticket.called_at)).label("avg_handling_time_seconds")
+            func.avg(func.extract("epoch", Ticket.finished_at - Ticket.called_at)/60).label("avg_handling_time_minutes")
         )
         .filter(Ticket.tenxa_id == tenxa_id)
         .filter(
@@ -258,7 +274,7 @@ def average_waiting_time(
     result = (
         db.query(
             Ticket.counter_id,
-            func.avg(func.extract("epoch", Ticket.called_at - Ticket.created_at)).label("avg_waiting_time_seconds")
+            func.avg(func.extract("epoch", Ticket.called_at - Ticket.created_at)/60).label("avg_waiting_time_minutes")
         )
         .filter(
             Ticket.created_at.isnot(None),
