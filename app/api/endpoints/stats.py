@@ -147,7 +147,7 @@ def average_handling_time(
     result = (
         db.query(
             Ticket.counter_id,
-            func.avg(func.extract("epoch", Ticket.finished_at - Ticket.called_at)/60).label("avg_handling_time_minutes")
+            func.avg(func.extract("epoch", Ticket.finished_at - Ticket.called_at)).label("avg_handling_time_minutes")
         )
         .filter(Ticket.tenxa_id == tenxa_id)
         .filter(
@@ -278,7 +278,7 @@ def average_waiting_time(
     result = (
         db.query(
             Ticket.counter_id,
-            func.avg(func.extract("epoch", Ticket.called_at - Ticket.created_at)/60).label("avg_waiting_time_minutes")
+            func.avg(func.extract("epoch", Ticket.called_at - Ticket.created_at)).label("avg_waiting_time_minutes")
         )
         .filter(
             Ticket.created_at.isnot(None),
