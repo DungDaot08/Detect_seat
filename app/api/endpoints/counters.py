@@ -12,7 +12,7 @@ import pytz
 
 router = APIRouter()
 
-@router.post("/{counter_id}/call-next", response_model=Optional[schemas.CalledTicket])
+@router.post("/{counter_id}/call-next/old", response_model=Optional[schemas.CalledTicket])
 def call_next_manually(
     counter_id: int,
     background_tasks: BackgroundTasks,
@@ -99,3 +99,55 @@ def get_counter_by_id(counter_id: int,tenxa: str = Query(...), db: Session = Dep
     if not counter:
         raise HTTPException(status_code=404, detail="Counter not found")
     return counter
+
+@router.post("/{counter_id}/call-next", response_model=Optional[schemas.CalledTicket])
+def call_next_manually(
+    counter_id: int,
+    background_tasks: BackgroundTasks,
+    tenxa: str = Query(...),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    tenxa_id = crud.get_tenxa_id_from_slug(db, tenxa)
+    check_counter_permission(counter_id, current_user)
+
+    ticket = crud.call_next_ticket(db, tenxa_id, counter_id)
+
+    # Dù có vé hay không, vẫn lấy thông tin quầy để gửi WebSocket
+    counter = db.query(Counter).filter(
+        Counter.id == counter_id,
+        Counter.tenxa_id == tenxa_id
+    ).first()
+    if not counter:
+        raise HTTPException(status_code=404, detail="Không tìm thấy quầy.")
+
+    vn_time = datetime.now(pytz.timezone("Asia/Ho_Chi_Minh")).isoformat()
+
+    # Gửi sự kiện WebSocket với ticket_number có thể là None
+    background_tasks.add_task(
+        notify_frontend,
+        {
+            "event": "ticket_called",
+            "ticket_number": ticket.number if ticket else None,
+            "counter_name": counter.name,
+            "tenxa": tenxa,
+            "timestamp": vn_time
+        }
+    )
+
+    if ticket:
+        # Nếu có vé thì reset auto-call và trả về kết quả
+        event = reset_events.get((counter_id, tenxa_id))
+        if event:
+            print(f"♻️ Reset auto-call cho quầy {counter_id} xã {tenxa_id}")
+            event.set()
+
+        return schemas.CalledTicket(
+            number=ticket.number,
+            counter_name=counter.name,
+            tenxa=tenxa
+        )
+
+    # Không có vé, vẫn gửi sự kiện và trả 204
+    return None
+
