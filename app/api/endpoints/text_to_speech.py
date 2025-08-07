@@ -16,9 +16,9 @@ PREFIX_PATH = os.path.join(TTS_FOLDER, "prefix", "prefix.mp3")
 NUMBERS_PATH = os.path.join(TTS_FOLDER, "numbers")
 COUNTER_PATH = os.path.join(TTS_FOLDER, "counter_audio")
 
-print("PREFIX_PATH:", PREFIX_PATH)
-print("NUMBERS_PATH:", NUMBERS_PATH)
-print("COUNTER_PATH:", COUNTER_PATH)
+#print("PREFIX_PATH:", PREFIX_PATH)
+#print("NUMBERS_PATH:", NUMBERS_PATH)
+#print("COUNTER_PATH:", COUNTER_PATH)
 
 class TTSRequest(BaseModel):
     counter_id: int
