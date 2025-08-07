@@ -90,7 +90,7 @@ def tickets_per_counter(
 
     # ✅ Tính tổng tất cả vé
     total = sum(row[1] for row in result)
-    items.append(TicketsPerCounter(counter_id="Tổng", total_tickets=total))
+    #items.append(TicketsPerCounter(counter_id="Tổng", total_tickets=total))
 
     return items
 
@@ -125,7 +125,7 @@ def attended_tickets(
 
     # ✅ Thêm dòng tổng
     total = sum(row[1] for row in result)
-    items.append(AttendedTickets(counter_id="Tổng", attended_tickets=total))
+    #items.append(AttendedTickets(counter_id="Tổng", attended_tickets=total))
 
     return items
 
