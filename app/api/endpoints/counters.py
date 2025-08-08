@@ -8,6 +8,7 @@ from typing import Optional, List
 from app.api.endpoints.realtime import notify_frontend
 from app.utils.auto_call_loop import reset_events
 from datetime import datetime
+from sqlalchemy import func
 import pytz
 
 router = APIRouter()
@@ -167,13 +168,41 @@ def upsert_counter(
         counter.name = counter_name
     else:
         # Nếu chưa tồn tại → Tạo mới
+        max_code = db.query(func.max(models.Counter.code)).scalar() or 0
         counter = models.Counter(
             id=counter_id,
             tenxa_id=tenxa_id,
-            name=counter_name
+            name=counter_name,
+            code=max_code + 1
         )
         db.add(counter)
 
     db.commit()
     db.refresh(counter)
     return counter
+
+@router.delete("/delete-counter")
+def delete_counter(
+    tenxa: str,
+    counter_id: int,
+    db: Session = Depends(get_db)
+):
+    # Lấy tenxa_id
+    tenxa_id = crud.get_tenxa_id_from_slug(db, tenxa)
+
+    # Tìm counter theo ID và tenxa_id
+    counter = (
+        db.query(models.Counter)
+        .filter(models.Counter.id == counter_id)
+        .filter(models.Counter.tenxa_id == tenxa_id)
+        .first()
+    )
+
+    if not counter:
+        raise HTTPException(status_code=404, detail="Counter không tồn tại")
+
+    # Xóa counter
+    db.delete(counter)
+    db.commit()
+
+    return {"message": "Xóa counter thành công", "counter_id": counter_id}
