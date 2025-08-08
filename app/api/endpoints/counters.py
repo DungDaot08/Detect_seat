@@ -155,24 +155,24 @@ def call_next_manually(
 @router.post("/upsert-counter", response_model=schemas.Counter)
 def upsert_counter(
     tenxa: str,
-    counter_name: str,
-    counter_id: int,
+    data: schemas.CounterUpsertRequest,
     db: Session = Depends(get_db)
 ):
     # Tìm quầy theo ID
     tenxa_id = crud.get_tenxa_id_from_slug(db, tenxa)
-    counter = db.query(models.Counter).filter(models.Counter.id == counter_id).filter(models.Counter.tenxa_id == tenxa_id).first()
+    counter = db.query(models.Counter).filter(models.Counter.id == data.counter_id).filter(models.Counter.tenxa_id == tenxa_id).first()
 
     if counter:
         # Nếu đã tồn tại → Cập nhật tên và xã
-        counter.name = counter_name
+        counter.name = data.name
     else:
         # Nếu chưa tồn tại → Tạo mới
         max_code = db.query(func.max(models.Counter.code)).scalar() or 0
         counter = models.Counter(
-            id=counter_id,
+            id=data.counter_id,
             tenxa_id=tenxa_id,
-            name=counter_name,
+            name=data.name,
+
             code=max_code + 1
         )
         db.add(counter)
@@ -200,6 +200,10 @@ def delete_counter(
 
     if not counter:
         raise HTTPException(status_code=404, detail="Counter không tồn tại")
+
+    
+    db.query(models.CounterPauseLog).filter(models.CounterPauseLog.counter_id == counter_id).filter(models.CounterPauseLog.tenxa_id == tenxa_id).delete()
+
 
     # Xóa counter
     db.delete(counter)

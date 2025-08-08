@@ -92,6 +92,13 @@ class CounterPauseLog(BaseModel):
     end_time: Optional[datetime] = None
     class Config:
         orm_mode = True
+
+class CounterUpsertRequest(BaseModel):
+    counter_id: Optional[int] = None
+    name: str
+
+    class Config:
+        orm_mode = True
         
 class Role(str, Enum):
     admin = "admin"
