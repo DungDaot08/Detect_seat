@@ -202,6 +202,7 @@ def upsert_counter(
 def delete_counter(
     tenxa: str,
     counter_id: int,
+    background_tasks: BackgroundTasks,
     db: Session = Depends(get_db)
 ):
     # Lấy tenxa_id
@@ -258,5 +259,13 @@ def delete_counter(
     # Xóa counter
     db.delete(counter)
     db.commit()
+    background_tasks.add_task(
+            notify_frontend,
+            {
+                "event": "delete_counter",
+                "counter_id": counter_id,
+                "tenxa": tenxa,
+            }
+        )
 
     return {"message": "Xóa counter thành công", "counter_id": counter_id}
