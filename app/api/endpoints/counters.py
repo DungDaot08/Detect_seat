@@ -155,11 +155,19 @@ def call_next_manually(
 @router.post("/upsert-counter", response_model=schemas.Counter)
 def upsert_counter(
     tenxa: str,
+    background_tasks: BackgroundTasks,
     data: schemas.CounterUpsertRequest,
     db: Session = Depends(get_db)
 ):
     # Tìm quầy theo ID
     tenxa_id = crud.get_tenxa_id_from_slug(db, tenxa)
+    if data.counter_id == 0:
+        # Lấy counter_id lớn nhất trong cùng tenxa_id
+        max_id = db.query(func.max(models.Counter.id))\
+                   .filter(models.Counter.tenxa_id == tenxa_id)\
+                   .scalar() or 0
+        new_id = max_id + 1
+        data.counter_id = new_id
     counter = db.query(models.Counter).filter(models.Counter.id == data.counter_id).filter(models.Counter.tenxa_id == tenxa_id).first()
 
     if counter:
@@ -179,6 +187,15 @@ def upsert_counter(
 
     db.commit()
     db.refresh(counter)
+    background_tasks.add_task(
+            notify_frontend,
+            {
+                "event": "upsert_counter",
+                "counter_id": data.counter_id,
+                "counter_name": data.name,
+                "tenxa": tenxa,
+            }
+        )
     return counter
 
 @router.delete("/delete-counter")
