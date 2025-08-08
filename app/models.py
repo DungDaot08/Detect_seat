@@ -47,7 +47,7 @@ class Counter(Base):
     code = Column(Integer, primary_key=True, index=True)
     id = Column(Integer)
     name = Column(String, nullable=False)
-    timeout_seconds = Column(Integer, default=60)
+    #timeout_seconds = Column(Integer, default=60)
     status = Column(String(20), nullable=False, default="active")
     tenxa_id = Column(Integer, ForeignKey("tenxa.id"), nullable=False)
 

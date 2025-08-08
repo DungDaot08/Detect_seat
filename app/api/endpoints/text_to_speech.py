@@ -16,9 +16,9 @@ PREFIX_PATH = os.path.join(TTS_FOLDER, "prefix", "prefix.mp3")
 NUMBERS_PATH = os.path.join(TTS_FOLDER, "numbers")
 COUNTER_PATH = os.path.join(TTS_FOLDER, "counter_audio")
 
-print("PREFIX_PATH:", PREFIX_PATH)
-print("NUMBERS_PATH:", NUMBERS_PATH)
-print("COUNTER_PATH:", COUNTER_PATH)
+#print("PREFIX_PATH:", PREFIX_PATH)
+#print("NUMBERS_PATH:", NUMBERS_PATH)
+#print("COUNTER_PATH:", COUNTER_PATH)
 
 class TTSRequest(BaseModel):
     counter_id: int
@@ -101,6 +101,7 @@ from fastapi.responses import StreamingResponse
 @router.post("/generate_counter_audio")
 def generate_counter_audio(
     counter_id: int,
+    counter_name: str,
     tenxa: str = Query(...),
     db: Session = Depends(get_db)
 ):
@@ -116,7 +117,7 @@ def generate_counter_audio(
         raise HTTPException(status_code=404, detail="Không tìm thấy quầy")
 
     # Tạo nội dung
-    text = f"Đến quầy số {counter_id}: {counter.name}"
+    text = f"Đến quầy số {counter_id}: {counter_name}"
     tts = gTTS(text, lang='vi')
 
     # Lưu vào memory (BytesIO)
