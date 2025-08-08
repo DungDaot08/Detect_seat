@@ -30,7 +30,7 @@ def get_db():
     finally:
         db.close()
 
-@router.post("/", response_class=FileResponse)
+@router.post("/old", response_class=FileResponse)
 def generate_tts(
     request: TTSRequest,
     background_tasks: BackgroundTasks,
@@ -174,7 +174,7 @@ def export_counter_audio(
         }
     )
 
-@router.post("/new", response_class=FileResponse)
+@router.post("/", response_class=FileResponse)
 def generate_tts(
     request: TTSRequest,
     background_tasks: BackgroundTasks,
