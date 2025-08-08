@@ -151,3 +151,29 @@ def call_next_manually(
     # Không có vé, vẫn gửi sự kiện và trả 204
     return None
 
+@router.post("/upsert-counter", response_model=schemas.Counter)
+def upsert_counter(
+    tenxa: str,
+    counter_name: str,
+    counter_id: int,
+    db: Session = Depends(get_db)
+):
+    # Tìm quầy theo ID
+    tenxa_id = crud.get_tenxa_id_from_slug(db, tenxa)
+    counter = db.query(models.Counter).filter(models.Counter.id == counter_id).filter(models.Counter.tenxa_id == tenxa_id).first()
+
+    if counter:
+        # Nếu đã tồn tại → Cập nhật tên và xã
+        counter.name = counter_name
+    else:
+        # Nếu chưa tồn tại → Tạo mới
+        counter = models.Counter(
+            id=counter_id,
+            tenxa_id=tenxa_id,
+            name=counter_name
+        )
+        db.add(counter)
+
+    db.commit()
+    db.refresh(counter)
+    return counter
