@@ -8,6 +8,7 @@ from typing import Optional, List
 from app.api.endpoints.realtime import notify_frontend
 from app.utils.auto_call_loop import reset_events
 from datetime import datetime
+from sqlalchemy import func
 import pytz
 
 router = APIRouter()
