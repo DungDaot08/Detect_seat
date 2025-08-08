@@ -179,3 +179,29 @@ def upsert_counter(
     db.commit()
     db.refresh(counter)
     return counter
+
+@router.delete("/delete-counter")
+def delete_counter(
+    tenxa: str,
+    counter_id: int,
+    db: Session = Depends(get_db)
+):
+    # Lấy tenxa_id
+    tenxa_id = crud.get_tenxa_id_from_slug(db, tenxa)
+
+    # Tìm counter theo ID và tenxa_id
+    counter = (
+        db.query(models.Counter)
+        .filter(models.Counter.id == counter_id)
+        .filter(models.Counter.tenxa_id == tenxa_id)
+        .first()
+    )
+
+    if not counter:
+        raise HTTPException(status_code=404, detail="Counter không tồn tại")
+
+    # Xóa counter
+    db.delete(counter)
+    db.commit()
+
+    return {"message": "Xóa counter thành công", "counter_id": counter_id}
