@@ -167,10 +167,12 @@ def upsert_counter(
         counter.name = counter_name
     else:
         # Nếu chưa tồn tại → Tạo mới
+        max_code = db.query(func.max(models.Counter.code)).scalar() or 0
         counter = models.Counter(
             id=counter_id,
             tenxa_id=tenxa_id,
-            name=counter_name
+            name=counter_name,
+            code=max_code + 1
         )
         db.add(counter)
 
