@@ -3,8 +3,7 @@ from fastapi.responses import FileResponse
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 import uuid, os, subprocess
-
-from app import database, models, crud
+from app import database, models, crud, schemas
 
 router = APIRouter()
 
@@ -100,8 +99,7 @@ from fastapi.responses import StreamingResponse
 
 @router.post("/generate_counter_audio")
 def generate_counter_audio(
-    counter_id: int,
-    counter_name: str,
+    data: schemas.CounterUpsertRequest,
     tenxa: str = Query(...),
     db: Session = Depends(get_db)
 ):
@@ -110,14 +108,14 @@ def generate_counter_audio(
 
     # Tìm quầy
     counter = db.query(models.Counter).filter(
-        models.Counter.id == counter_id,
+        models.Counter.id == data.counter_id,
         models.Counter.tenxa_id == tenxa_id
     ).first()
     if not counter:
         raise HTTPException(status_code=404, detail="Không tìm thấy quầy")
 
     # Tạo nội dung
-    text = f"Đến quầy số {counter_id}: {counter_name}"
+    text = f"Đến quầy số {data.counter_id}: {data.name}"
     tts = gTTS(text, lang='vi')
 
     # Lưu vào memory (BytesIO)
@@ -129,13 +127,13 @@ def generate_counter_audio(
     # Xoá bản ghi cũ (nếu có)
     db.query(models.TTSAudio).filter(
         models.TTSAudio.tenxa_id == tenxa_id,
-        models.TTSAudio.counter_id == counter_id
+        models.TTSAudio.counter_id == data.counter_id
     ).delete(synchronize_session=False)
 
     # Ghi bản mới vào PostgreSQL
     new_audio = models.TTSAudio(
         tenxa_id=tenxa_id,
-        counter_id=counter_id,
+        counter_id=data.counter_id,
         audio_data=audio_bytes,
         created_at=datetime.utcnow()
     )
