@@ -199,6 +199,8 @@ def delete_counter(
 
     if not counter:
         raise HTTPException(status_code=404, detail="Counter không tồn tại")
+    
+    db.query(models.CounterPauseLog).filter(models.CounterPauseLog.counter_id == counter_id).filter(models.CounterPauseLog.tenxa_id == tenxa_id).delete()
 
     # Xóa counter
     db.delete(counter)
