@@ -200,11 +200,44 @@ def delete_counter(
 
     if not counter:
         raise HTTPException(status_code=404, detail="Counter không tồn tại")
-
+    db.query(models.CounterPauseLog).filter(
+        models.CounterPauseLog.counter_id == counter_id,
+        models.CounterPauseLog.tenxa_id == tenxa_id
+    ).delete(synchronize_session=False)
     
-    db.query(models.CounterPauseLog).filter(models.CounterPauseLog.counter_id == counter_id).filter(models.CounterPauseLog.tenxa_id == tenxa_id).delete()
+    seat_ids = db.query(models.Seat.id).filter(
+        models.Seat.counter_id == counter_id,
+        models.Seat.tenxa_id == tenxa_id
+    ).all()
+    seat_ids = [s.id for s in seat_ids]
 
+    if seat_ids:
+        # Xóa SeatLog trước
+        db.query(models.SeatLog).filter(
+            models.SeatLog.seat_id.in_(seat_ids),
+            models.SeatLog.tenxa_id == tenxa_id
+        ).delete(synchronize_session=False)
 
+        # Xóa Seat
+        db.query(models.Seat).filter(
+            models.Seat.id.in_(seat_ids)
+        ).delete(synchronize_session=False)
+    
+    db.query(models.CounterField).filter(
+        models.CounterField.counter_id == counter_id,
+        models.CounterField.tenxa_id == tenxa_id
+    ).delete(synchronize_session=False)
+    
+    db.query(models.User).filter(
+        models.User.counter_id == counter_id,
+        models.User.tenxa_id == tenxa_id
+    ).delete(synchronize_session=False)
+    
+    db.query(models.Ticket).filter(
+        models.Ticket.counter_id == counter_id,
+        models.Ticket.tenxa_id == tenxa_id
+    ).delete(synchronize_session=False)
+    db.commit
     # Xóa counter
     db.delete(counter)
     db.commit()

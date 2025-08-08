@@ -39,7 +39,7 @@ class Ticket(Base):
     finished_at = Column(DateTime, nullable=True, default=None)
     tenxa_id = Column(Integer, ForeignKey("tenxa.id"), nullable=False)
 
-    counter = relationship("Counter", back_populates="tickets")
+    #counter = relationship("Counter", back_populates="tickets")
     tenxa = relationship("Tenxa")
 class Counter(Base):
     __tablename__ = "counters"
@@ -52,9 +52,10 @@ class Counter(Base):
     tenxa_id = Column(Integer, ForeignKey("tenxa.id"), nullable=False)
 
     counter_fields = relationship("CounterField", back_populates="counter")
-    seats = relationship("Seat", back_populates="counter", cascade="all, delete")
-    tickets = relationship("Ticket", back_populates="counter", cascade="all, delete")
+    seats = relationship("Seat", back_populates="counter")
+    #tickets = relationship("Ticket", back_populates="counter")
     users = relationship("User", back_populates="counter")
+    pause_logs = relationship("CounterPauseLog",back_populates="counter")
     tenxa = relationship("Tenxa")
 
 class CounterField(Base):
@@ -113,7 +114,7 @@ class CounterPauseLog(Base):
     end_time = Column(DateTime, nullable=True)
     tenxa_id = Column(Integer, ForeignKey("tenxa.id"), nullable=False)   
 
-    counter = relationship("Counter", backref="pause_logs")
+    counter = relationship("Counter", back_populates="pause_logs")
     tenxa = relationship("Tenxa")
     
 class Role(str, enum.Enum):
