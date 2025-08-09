@@ -244,7 +244,7 @@ def get_procedures_with_counters(db: Session, tenxa_id: int, search: str = "") -
             })
 
     results.sort(key=lambda x: x["score"], reverse=True)
-    return results[:3]
+    return results[:1]
 
 def call_next_ticket(db: Session, tenxa_id: int, counter_id: int) -> Optional[Ticket]:
     # Kiểm tra xem quầy có tồn tại không
