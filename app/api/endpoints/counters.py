@@ -180,7 +180,6 @@ def upsert_counter(
             id=data.counter_id,
             tenxa_id=tenxa_id,
             name=data.name,
-
             code=max_code + 1
         )
         db.add(counter)

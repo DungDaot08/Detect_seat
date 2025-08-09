@@ -4,6 +4,7 @@ from pydantic import BaseModel
 from sqlalchemy.orm import Session
 import uuid, os, subprocess
 from app import database, models, crud, schemas
+from sqlalchemy import func
 
 router = APIRouter()
 
@@ -106,13 +107,19 @@ def generate_counter_audio(
     # Lấy ID xã
     tenxa_id = crud.get_tenxa_id_from_slug(db, tenxa)
 
+    if data.counter_id == 0:
+        max_id = db.query(func.max(models.Counter.id))\
+                   .filter(models.Counter.tenxa_id == tenxa_id)\
+                   .scalar() or 0
+        new_id = max_id + 1
+        data.counter_id = new_id
     # Tìm quầy
-    counter = db.query(models.Counter).filter(
-        models.Counter.id == data.counter_id,
-        models.Counter.tenxa_id == tenxa_id
-    ).first()
-    if not counter:
-        raise HTTPException(status_code=404, detail="Không tìm thấy quầy")
+    #counter = db.query(models.Counter).filter(
+    #    models.Counter.id == data.counter_id,
+    #    models.Counter.tenxa_id == tenxa_id
+    #).first()
+    #if not counter:
+    #    raise HTTPException(status_code=404, detail="Không tìm thấy quầy")
 
     # Tạo nội dung
     text = f"Đến quầy số {data.counter_id}: {data.name}"
@@ -142,7 +149,7 @@ def generate_counter_audio(
 
     return {
         "detail": "Tạo và lưu file thành công",
-        "counter_name": counter.name
+        #"counter_name": counter.name
     }
 
 
