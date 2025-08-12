@@ -13,6 +13,7 @@ APP_DIR = os.path.abspath(os.path.join(BASE_DIR, "../../"))  # về tới thư m
 TTS_FOLDER = os.path.join(APP_DIR, "utils", "TTS")  # app/utils/TTS
 
 PREFIX_PATH = os.path.join(TTS_FOLDER, "prefix", "prefix.mp3")
+PREFIX_PATH_TAP = os.path.join(TTS_FOLDER, "prefix", "prefix_tap.mp3")
 NUMBERS_PATH = os.path.join(TTS_FOLDER, "numbers")
 COUNTER_PATH = os.path.join(TTS_FOLDER, "counter_audio")
 
@@ -200,7 +201,11 @@ def generate_tts(
         raise HTTPException(status_code=404, detail="Counter not found")
 
     # Đường dẫn 2 file local
-    prefix = PREFIX_PATH
+    if(tenxa_id == 5):
+        prefix = PREFIX_PATH_TAP
+    else:
+        prefix = PREFIX_PATH
+
     number = os.path.join(NUMBERS_PATH, f"{request.ticket_number}.mp3")
 
     # Lấy audio từ DB
