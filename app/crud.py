@@ -389,13 +389,29 @@ def get_user_by_username(db: Session, tenxa_id: int, username: str):
 
 def create_user(db: Session, tenxa_id: int, user: schemas.UserCreate):
     hashed_password = auth.hash_password(user.password)
+    
+    counter_id_check = None
+    if user.role == "officer":
+        if user.counter_id == 0:
+            # Lấy counter_id lớn nhất của tenxa_id hiện tại
+            max_counter_id = db.query(
+                db.func.max(models.User.counter_id)
+            ).filter(
+                models.User.tenxa_id == tenxa_id,
+                models.User.counter_id != None
+            ).scalar()
+
+            counter_id_check = (max_counter_id or 0) + 1
+        else:
+            counter_id_check = user.counter_id
+            
     db_user = models.User(
         username=user.username, 
         hashed_password=hashed_password,
         full_name=user.full_name, 
         role=user.role,
         tenxa_id=tenxa_id,
-        counter_id=user.counter_id if user.role == "officer" else None)
+        counter_id=counter_id_check if user.role == "officer" else None)
     db.add(db_user)
     db.commit()
     db.refresh(db_user)
