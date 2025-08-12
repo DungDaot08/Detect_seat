@@ -51,10 +51,10 @@ class Counter(Base):
     status = Column(String(20), nullable=False, default="active")
     tenxa_id = Column(Integer, ForeignKey("tenxa.id"), nullable=False)
 
-    counter_fields = relationship("CounterField", back_populates="counter")
-    seats = relationship("Seat", back_populates="counter")
+    #counter_fields = relationship("CounterField", back_populates="counter")
+    #seats = relationship("Seat", back_populates="counter")
     #tickets = relationship("Ticket", back_populates="counter")
-    users = relationship("User", back_populates="counter")
+    #users = relationship("User", back_populates="counter")
     #pause_logs = relationship("CounterPauseLog",back_populates="counter")
     tenxa = relationship("Tenxa")
 
@@ -68,7 +68,7 @@ class CounterField(Base):
 
     __table_args__ = (UniqueConstraint('counter_id', 'field_id', name='uix_counter_field'),)
 
-    counter = relationship("Counter", back_populates="counter_fields")
+    #counter = relationship("Counter", back_populates="counter_fields")
     field = relationship("Field", back_populates="counter_fields")
     tenxa = relationship("Tenxa") 
 
@@ -99,7 +99,7 @@ class Seat(Base):
     last_empty_time = Column(DateTime, nullable=True)
     tenxa_id = Column(Integer, ForeignKey("tenxa.id"), nullable=False)
 
-    counter = relationship("Counter", back_populates="seats")
+    #counter = relationship("Counter", back_populates="seats")
     logs = relationship("SeatLog", back_populates="seat")
     tenxa = relationship("Tenxa")
 
@@ -134,7 +134,7 @@ class User(Base):
     counter_id = Column(Integer, ForeignKey("counters.id"), nullable=True)
     tenxa_id = Column(Integer, ForeignKey("tenxa.id"), nullable=False)
 
-    counter = relationship("Counter", back_populates="users")
+    #counter = relationship("Counter", back_populates="users")
     tenxa = relationship("Tenxa")
     
 class Tenxa(Base):
