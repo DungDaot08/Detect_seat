@@ -15,7 +15,7 @@ def get_db():
         db.close()
 
 @router.get("/", response_model=schemas.FooterResponse)
-def get_footer(tenxa: str = Query(...), db: Session = Depends(get_db)):
+def get_config(tenxa: str = Query(...), db: Session = Depends(get_db)):
     tenxa_id = crud.get_tenxa_id_from_slug(db, tenxa)
     if not tenxa_id:
         raise HTTPException(status_code=404, detail="Không tìm thấy xã")
@@ -31,7 +31,7 @@ def get_footer(tenxa: str = Query(...), db: Session = Depends(get_db)):
     )
 
 @router.post("/", response_model=schemas.FooterResponse)
-def update_footer(data: schemas.FooterCreate, background_tasks: BackgroundTasks, tenxa: str = Query(...),  db: Session = Depends(get_db)):
+def update_config(data: schemas.FooterCreate, background_tasks: BackgroundTasks, tenxa: str = Query(...),  db: Session = Depends(get_db)):
     tenxa_id = crud.get_tenxa_id_from_slug(db, tenxa)
     if not tenxa_id:
         raise HTTPException(status_code=404, detail="Không tìm thấy xã")
