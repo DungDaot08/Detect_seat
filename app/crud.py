@@ -170,7 +170,7 @@ def get_called_tickets(db: Session, tenxa_id: int, counter_id: Optional[int] = N
 
     return query.order_by(models.Ticket.created_at.asc()).all()
 
-def get_called_tickets(db: Session, tenxa_id: int, counter_id: Optional[int] = None):
+def get_done_tickets(db: Session, tenxa_id: int, counter_id: Optional[int] = None):
     #vn_tz = ZoneInfo("Asia/Ho_Chi_Minh")
     today = datetime.now(vn_tz).date()
 

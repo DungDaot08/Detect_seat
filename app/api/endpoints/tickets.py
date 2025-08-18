@@ -56,6 +56,16 @@ def get_called_tickets(
     
     return crud.get_called_tickets(db, tenxa_id, counter_id)
 
+@router.get("/done", response_model=List[schemas.Ticket])
+def get_called_tickets(
+    counter_id: Optional[int] = Query(None, description="ID của quầy (tùy chọn)"),
+    tenxa: str = Query(...),
+    db: Session = Depends(get_db)
+):
+    tenxa_id = crud.get_tenxa_id_from_slug(db, tenxa)
+    
+    return crud.get_done_tickets(db, tenxa_id, counter_id)
+
 @router.put("/update_status", response_model=schemas.Ticket)
 def update_ticket_status(ticket_number: int, status_update: schemas.TicketUpdateStatus, tenxa: str = Query(...), db: Session = Depends(get_db)):
     tenxa_id = crud.get_tenxa_id_from_slug(db, tenxa)
