@@ -132,6 +132,7 @@ class Token(BaseModel):
 class FooterBase(BaseModel):
     work_time: str
     hotline: str
+    header: str
 
 class FooterCreate(FooterBase):
     pass

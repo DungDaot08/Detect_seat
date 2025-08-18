@@ -1,8 +1,9 @@
 # app/api/endpoints/footer.py
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, BackgroundTasks
 from sqlalchemy.orm import Session
 from app import crud, schemas, database
+from app.api.endpoints.realtime import notify_frontend
 
 router = APIRouter()
 
@@ -30,15 +31,24 @@ def get_footer(tenxa: str = Query(...), db: Session = Depends(get_db)):
     )
 
 @router.post("/", response_model=schemas.FooterResponse)
-def update_footer(data: schemas.FooterCreate, tenxa: str = Query(...), db: Session = Depends(get_db)):
+def update_footer(data: schemas.FooterCreate, background_tasks: BackgroundTasks, tenxa: str = Query(...),  db: Session = Depends(get_db)):
     tenxa_id = crud.get_tenxa_id_from_slug(db, tenxa)
     if not tenxa_id:
         raise HTTPException(status_code=404, detail="Không tìm thấy xã")
 
-    footer = crud.upsert_footer(db, tenxa_id, data.work_time, data.hotline)
+    footer = crud.upsert_footer(db, tenxa_id, data.work_time, data.hotline, data.header)
+    
+    background_tasks.add_task(
+        notify_frontend,
+        {
+            "event": "update_config",
+            "tenxa": tenxa,
+        }
+    )
 
     return schemas.FooterResponse(
         tenxa=tenxa,
         work_time=footer.work_time,
-        hotline=footer.hotline
+        hotline=footer.hotline,
+        header= footer.header
     )

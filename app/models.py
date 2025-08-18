@@ -165,5 +165,6 @@ class Footer(Base):
     tenxa_id = Column(Integer, ForeignKey("tenxa.id"), unique=True, nullable=False)
     work_time = Column(String, nullable=True)
     hotline = Column(String, nullable=True)
+    header = Column(String, nullable=True)
 
     tenxa = relationship("Tenxa")  # nếu bạn có bảng `tenxa`
