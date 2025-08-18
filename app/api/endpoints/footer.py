@@ -27,7 +27,8 @@ def get_config(tenxa: str = Query(...), db: Session = Depends(get_db)):
     return schemas.FooterResponse(
         tenxa=tenxa,
         work_time=footer.work_time,
-        hotline=footer.hotline
+        hotline=footer.hotline,
+        header= footer.header
     )
 
 @router.post("/", response_model=schemas.FooterResponse)
