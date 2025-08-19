@@ -133,6 +133,7 @@ def call_next_manually(
             "event": "ticket_called",
             "ticket_number": ticket.number if ticket else None,
             "counter_name": counter.name,
+            "counter_id": counter.id,
             "tenxa": tenxa,
             "timestamp": vn_time
         }
@@ -148,6 +149,7 @@ def call_next_manually(
         return schemas.CalledTicket(
             number=ticket.number,
             counter_name=counter.name,
+            counter_id=counter.id,
             tenxa=tenxa
         )
 
