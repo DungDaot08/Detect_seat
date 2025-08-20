@@ -201,6 +201,9 @@ def upsert_counter(
         db.add(db_user)
         db.commit()
         db.refresh(db_user)
+    db.add(counter)
+    db.commit()
+    db.refresh(counter)
     background_tasks.add_task(
             notify_frontend,
             {
