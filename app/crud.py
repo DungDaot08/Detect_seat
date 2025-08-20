@@ -420,6 +420,7 @@ def create_user(db: Session, tenxa_id: int, user: schemas.UserCreate):
             ).scalar()
 
             counter_id_check = (max_counter_id or 0) + 1
+            
         else:
             counter_id_check = user.counter_id
             

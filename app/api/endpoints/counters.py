@@ -6,6 +6,7 @@ from app.schemas import CounterPauseCreate, CounterPauseLog
 from app.auth import get_db, get_current_user, check_counter_permission
 from typing import Optional, List
 from app.api.endpoints.realtime import notify_frontend
+from app import models, schemas, auth
 from app.utils.auto_call_loop import reset_events
 from datetime import datetime
 from sqlalchemy import func
@@ -159,6 +160,8 @@ def call_next_manually(
 @router.post("/upsert-counter", response_model=schemas.Counter)
 def upsert_counter(
     tenxa: str,
+    postfix:str,
+    password:str,
     background_tasks: BackgroundTasks,
     data: schemas.CounterUpsertRequest,
     db: Session = Depends(get_db)
@@ -172,6 +175,7 @@ def upsert_counter(
                    .scalar() or 0
         new_id = max_id + 1
         data.counter_id = new_id
+
     counter = db.query(models.Counter).filter(models.Counter.id == data.counter_id).filter(models.Counter.tenxa_id == tenxa_id).first()
 
     if counter:
@@ -187,9 +191,18 @@ def upsert_counter(
             code=max_code + 1
         )
         db.add(counter)
-
-    db.commit()
-    db.refresh(counter)
+        db.commit()
+        db.refresh(counter)
+        db_user = models.User(
+            username="quay" + new_id + "." + postfix, 
+            hashed_password=hashed_password,
+            full_name="quay" + new_id + postfix, 
+            role="officer",
+            tenxa_id=tenxa_id,
+            counter_id= new_id)
+        db.add(db_user)
+        db.commit()
+        db.refresh(db_user)
     background_tasks.add_task(
             notify_frontend,
             {
