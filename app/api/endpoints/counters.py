@@ -194,9 +194,9 @@ def upsert_counter(
         db.refresh(counter)
         hashed_password = auth.hash_password(password)   
         db_user = models.User(
-            username="quay" + new_id + "." + postfix, 
+            username="quay" + str(new_id) + "." + postfix, 
             hashed_password=hashed_password,
-            full_name="quay" + new_id + postfix, 
+            full_name="quay" + str(new_id) + postfix, 
             role="officer",
             tenxa_id=tenxa_id,
             counter_id= new_id)
