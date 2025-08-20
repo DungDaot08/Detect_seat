@@ -175,7 +175,6 @@ def upsert_counter(
                    .scalar() or 0
         new_id = max_id + 1
         data.counter_id = new_id
-
     counter = db.query(models.Counter).filter(models.Counter.id == data.counter_id).filter(models.Counter.tenxa_id == tenxa_id).first()
 
     if counter:
@@ -193,6 +192,7 @@ def upsert_counter(
         db.add(counter)
         db.commit()
         db.refresh(counter)
+        hashed_password = auth.hash_password(password)   
         db_user = models.User(
             username="quay" + new_id + "." + postfix, 
             hashed_password=hashed_password,
