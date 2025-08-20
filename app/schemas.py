@@ -103,6 +103,15 @@ class CounterUpsertRequest(BaseModel):
     class Config:
         orm_mode = True
         
+class CounterUpsertRequestTTS(BaseModel):
+    counter_id: Optional[int] = None
+    name: str
+    postfix: str   # chuyển vào body
+    password: str 
+
+    class Config:
+        orm_mode = True
+        
 class Role(str, Enum):
     admin = "admin"
     leader = "leader"
