@@ -160,8 +160,6 @@ def call_next_manually(
 @router.post("/upsert-counter", response_model=schemas.Counter)
 def upsert_counter(
     tenxa: str,
-    postfix:str,
-    password:str,
     background_tasks: BackgroundTasks,
     data: schemas.CounterUpsertRequest,
     db: Session = Depends(get_db)
@@ -192,11 +190,11 @@ def upsert_counter(
         db.add(counter)
         db.commit()
         db.refresh(counter)
-        hashed_password = auth.hash_password(password)   
+        hashed_password = auth.hash_password(data.password)   
         db_user = models.User(
-            username="quay" + str(new_id) + "." + postfix, 
+            username="quay" + str(new_id) + "." + data.postfix, 
             hashed_password=hashed_password,
-            full_name="quay" + str(new_id) + postfix, 
+            full_name="quay" + str(new_id) + data.postfix, 
             role="officer",
             tenxa_id=tenxa_id,
             counter_id= new_id)
