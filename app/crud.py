@@ -142,9 +142,14 @@ def get_ticket(db: Session, tenxa_id: int, ticket_number: int):
     """
     Lấy thông tin 1 ticket theo số vé (ticket_number) và xã (tenxa_id).
     """
+    today = datetime.now(vn_tz).date()
+    start_of_day = datetime.combine(today, time.min, tzinfo=vn_tz)
+    end_of_day = datetime.combine(today, time.max, tzinfo=vn_tz)
     return (
         db.query(models.Ticket)
         .filter(
+            models.Ticket.created_at >= start_of_day,
+            models.Ticket.created_at <= end_of_day,
             models.Ticket.tenxa_id == tenxa_id,
             models.Ticket.number == ticket_number
         )
@@ -484,10 +489,16 @@ def update_ticket_rating(
     rating_update: schemas.TicketRatingUpdate,
     timeout_minutes: int
 ):
+    today = datetime.now(vn_tz).date()
+    start_of_day = datetime.combine(today, time.min, tzinfo=vn_tz)
+    end_of_day = datetime.combine(today, time.max, tzinfo=vn_tz)
+    
     ticket = (
         db.query(models.Ticket)
         .filter(models.Ticket.tenxa_id == tenxa_id)
         .filter(models.Ticket.number == ticket_number)
+        .filter(Ticket.created_at >= start_of_day)
+        .filter(Ticket.created_at <= end_of_day)
         .first()
     )
 
