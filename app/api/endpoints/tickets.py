@@ -1,8 +1,13 @@
-from fastapi import APIRouter, Depends, Query, BackgroundTasks
+from fastapi import APIRouter, Depends, Query, BackgroundTasks, HTTPException
 from sqlalchemy.orm import Session
 from app import crud, schemas, database
 from typing import List, Optional
 from app.api.endpoints.realtime import notify_frontend
+from datetime import datetime, timedelta
+from pytz import timezone
+
+vn_tz = timezone("Asia/Ho_Chi_Minh")
+
 
 router = APIRouter()
 
@@ -71,3 +76,44 @@ def update_ticket_status(ticket_number: int, status_update: schemas.TicketUpdate
     tenxa_id = crud.get_tenxa_id_from_slug(db, tenxa)
     
     return crud.update_ticket_status(db, tenxa_id, ticket_number, status_update)
+
+@router.get("/{ticket_number}/feedback", response_model=schemas.TicketFeedbackInfo)
+def get_ticket_feedback_info(ticket_number: int, tenxa: str, db: Session = Depends(get_db)):
+    tenxa_id = crud.get_tenxa_id_from_slug(db, tenxa)
+    ticket = crud.get_ticket(db, tenxa_id, ticket_number)
+
+    if not ticket:
+        raise HTTPException(status_code=404, detail="Không tìm thấy vé")
+
+    if not ticket.finished_at:
+        raise HTTPException(status_code=400, detail="Vé chưa được tiếp đón xong")
+
+    # lấy thời gian timeout từ bảng tenxa
+    feedback_timeout = crud.get_feedback_timeout(db, tenxa_id)
+
+    # kiểm tra thời gian còn hạn đánh giá
+    deadline = ticket.finished_at + timedelta(minutes=feedback_timeout)
+    expired = datetime.now(vn_tz) > deadline
+
+    return {
+        "ticket_number": ticket.number,
+        "status": ticket.status,
+        "finished_at": ticket.finished_at,
+        "can_rate": not expired and ticket.rating is None,
+        "rating": ticket.rating,
+        "feedback": ticket.feedback
+    }
+
+
+@router.post("/{ticket_number}/feedback", response_model=schemas.Ticket)
+def submit_ticket_feedback(
+    ticket_number: int,
+    feedback_data: schemas.TicketRatingUpdate,
+    tenxa: str,
+    db: Session = Depends(get_db)
+):
+    tenxa_id = crud.get_tenxa_id_from_slug(db, tenxa)
+    feedback_timeout = crud.get_feedback_timeout(db, tenxa_id)
+
+    return crud.update_ticket_rating(db, tenxa_id, ticket_number, feedback_data, feedback_timeout)
+

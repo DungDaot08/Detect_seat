@@ -37,7 +37,11 @@ class Ticket(Base):
     status = Column(String(20), default="waiting")
     called_at = Column(DateTime, nullable=True, default=None)
     finished_at = Column(DateTime, nullable=True, default=None)
+    rating = Column(Enum("satisfied", "neutral", "needs_improvement", name="rating_enum"), nullable=True, default="satisfied")
+    feedback = Column(Text, nullable=True)
+    rated_at = Column(DateTime, nullable=True)
     tenxa_id = Column(Integer, ForeignKey("tenxa.id"), nullable=False)
+    
 
     #counter = relationship("Counter", back_populates="tickets")
     tenxa = relationship("Tenxa")
@@ -144,6 +148,7 @@ class Tenxa(Base):
     name = Column(String, nullable=False)
     slug = Column(String, unique=True, index=True, nullable=False)
     auto_call = Column(Boolean, default=False)
+    feedback_timeout = Column(Integer, default=15)
     
 from sqlalchemy import Column, Integer, LargeBinary, DateTime
 from sqlalchemy.sql import func

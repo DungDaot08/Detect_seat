@@ -149,3 +149,18 @@ class FooterCreate(FooterBase):
 
 class FooterResponse(FooterBase):
     tenxa: str
+    
+class TicketFeedbackInfo(BaseModel):
+    ticket_number: int
+    status: str
+    finished_at: Optional[datetime] = None
+    can_rate: bool
+    rating: Optional[str] = None   # "satisfied" | "neutral" | "needs_improvement"
+    feedback: Optional[str] = None
+
+    class Config:
+        orm_mode = True
+        
+class TicketRatingUpdate(BaseModel):
+    rating: str   # "satisfied" | "neutral" | "needs_improvement"
+    feedback: Optional[str] = None

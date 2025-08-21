@@ -4,7 +4,7 @@ from typing import List, Optional
 from rapidfuzz import fuzz
 from datetime import datetime, time
 from sqlalchemy import extract
-from app.models import Procedure, Counter, CounterField, Ticket
+from app.models import Procedure, Counter, CounterField, Ticket, Tenxa
 from app import models, schemas, auth
 from passlib.context import CryptContext
 from fastapi import HTTPException
@@ -12,6 +12,11 @@ from pytz import timezone
 
 pwd_context = CryptContext(schemes=["pbkdf2_sha256"], deprecated="auto")
 vn_tz = timezone("Asia/Ho_Chi_Minh")
+
+def get_feedback_timeout(db: Session, tenxa_id: int) -> int:
+    tenxa = db.query(models.Tenxa).filter(models.Tenxa.id == tenxa_id).first()
+    return tenxa.feedback_timeout if tenxa and tenxa.feedback_timeout else 15
+
 
 def get_tenxa_id_from_slug(db: Session, slug: str) -> Optional[int]:
     tenxa = db.query(models.Tenxa).filter(models.Tenxa.slug == slug).first()
@@ -133,7 +138,19 @@ def create_ticket(db: Session, tenxa_id: int, ticket: schemas.TicketCreate) -> m
     db.refresh(db_ticket)
     return db_ticket
 
-
+def get_ticket(db: Session, tenxa_id: int, ticket_number: int):
+    """
+    Lấy thông tin 1 ticket theo số vé (ticket_number) và xã (tenxa_id).
+    """
+    return (
+        db.query(models.Ticket)
+        .filter(
+            models.Ticket.tenxa_id == tenxa_id,
+            models.Ticket.number == ticket_number
+        )
+        .first()
+    )
+    
 def get_waiting_tickets(db: Session, tenxa_id: int, counter_id: Optional[int] = None):
     #vn_tz = ZoneInfo("Asia/Ho_Chi_Minh")
     today = datetime.now(vn_tz).date()
@@ -459,3 +476,44 @@ def upsert_footer(db: Session, tenxa_id: int, work_time: str, hotline: str, head
     db.commit()
     db.refresh(footer)
     return footer
+
+def update_ticket_rating(
+    db: Session,
+    tenxa_id: int,
+    ticket_number: int,
+    rating_update: schemas.TicketRatingUpdate,
+    timeout_minutes: int
+):
+    ticket = (
+        db.query(models.Ticket)
+        .filter(models.Ticket.tenxa_id == tenxa_id)
+        .filter(models.Ticket.number == ticket_number)
+        .first()
+    )
+
+    if not ticket:
+        raise HTTPException(status_code=404, detail="Không tìm thấy vé")
+
+    if not ticket.finished_at:
+        raise HTTPException(status_code=400, detail="Vé chưa được tiếp đón xong")
+
+    # Kiểm tra hạn đánh giá
+    deadline = ticket.finished_at + timedelta(minutes=timeout_minutes)
+    if datetime.now(vn_tz) > deadline:
+        raise HTTPException(status_code=400, detail="Đã hết thời gian đánh giá")
+
+    # Validate rating
+    if rating_update.rating not in ["satisfied", "neutral", "needs_improvement"]:
+        raise HTTPException(status_code=400, detail="Giá trị rating không hợp lệ")
+
+    if rating_update.rating == "needs_improvement" and not rating_update.feedback:
+        raise HTTPException(status_code=400, detail="Cần nhập nội dung góp ý khi chọn 'Cần cải thiện'")
+
+    # Cập nhật vé
+    ticket.rating = rating_update.rating
+    ticket.feedback = rating_update.feedback
+    ticket.rated_at = datetime.now(vn_tz)
+
+    db.commit()
+    db.refresh(ticket)
+    return ticket
