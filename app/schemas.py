@@ -164,3 +164,21 @@ class TicketFeedbackInfo(BaseModel):
 class TicketRatingUpdate(BaseModel):
     rating: str   # "satisfied" | "neutral" | "needs_improvement"
     feedback: Optional[str] = None
+    
+class TvGroupBase(BaseModel):
+    name: str
+    tenxa_id: int
+    counter_ids: List[int] = []
+
+class TvGroupCreate(TvGroupBase):
+    pass
+
+class TvGroupUpdate(TvGroupBase):
+    pass
+
+class TvGroupResponse(TvGroupBase):
+    id: int
+    counters: List[Counter] = []
+
+    class Config:
+        orm_mode = True

@@ -100,6 +100,7 @@ def get_ticket_feedback_info(ticket_number: int, tenxa: str, db: Session = Depen
         "status": ticket.status,
         "finished_at": ticket.finished_at,
         "can_rate": not expired and (ticket.rating is None or ticket.rating == "satisfied"),
+        "can_rate": not expired,
         "rating": ticket.rating,
         "feedback": ticket.feedback
     }

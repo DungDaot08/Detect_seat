@@ -1,6 +1,7 @@
 from sqlalchemy import Column, Integer, String, ForeignKey, UniqueConstraint, DateTime, func, Boolean, Text, Enum
 from sqlalchemy.orm import relationship
 from app.database import Base
+from sqlalchemy.dialects.postgresql import ARRAY
 from sqlalchemy import Enum as PgEnum
 import enum
 
@@ -173,3 +174,11 @@ class Footer(Base):
     header = Column(String, nullable=True)
 
     tenxa = relationship("Tenxa")  # nếu bạn có bảng `tenxa`
+    
+class TvGroup(Base):
+    __tablename__ = "tv_groups"
+
+    id = Column(Integer, primary_key=True, index=True)
+    name = Column(String(100), nullable=False)
+    tenxa_id = Column(Integer, nullable=False)
+    counter_ids = Column(ARRAY(Integer), nullable=False, default=[])
