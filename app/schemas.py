@@ -167,7 +167,6 @@ class TicketRatingUpdate(BaseModel):
     
 class TvGroupBase(BaseModel):
     name: str
-    tenxa_id: int
     counter_ids: List[int] = []
 
 class TvGroupCreate(TvGroupBase):
@@ -178,6 +177,7 @@ class TvGroupUpdate(TvGroupBase):
 
 class TvGroupResponse(TvGroupBase):
     id: int
+    tenxa_id: int
     counters: List[Counter] = []
 
     class Config:
