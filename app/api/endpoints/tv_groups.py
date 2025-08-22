@@ -21,7 +21,7 @@ def get_tv_groups_by_tenxa(tenxa: str = Query(...), db: Session = Depends(get_db
     groups = db.query(models.TvGroup).filter(models.TvGroup.tenxa_id == tenxa_id).all()
     result = []
     for g in groups:
-        counters = db.query(models.Counter).filter(models.Counter.id.in_(g.counter_ids)).filter(models.TvGroup.tenxa_id == tenxa_id).all()
+        counters = db.query(models.Counter).filter(models.Counter.id.in_(g.counter_ids)).filter(models.Counter.tenxa_id == tenxa_id).all()
         result.append(
             schemas.TvGroupResponse(
                 id=g.id,
