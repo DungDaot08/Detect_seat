@@ -1,7 +1,8 @@
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, BackgroundTasks
 from sqlalchemy.orm import Session
 from typing import List
 from app import crud, schemas, database, auth, models
+from app.api.endpoints.realtime import notify_frontend
 #from models import TvGroup, Counter
 #from schemas import TvGroupCreate, TvGroupUpdate, TvGroupResponse, Counter
 
@@ -35,7 +36,7 @@ def get_tv_groups(tenxa: str = Query(...), db: Session = Depends(get_db)):
 
 # Tạo group mới
 @router.post("/", response_model=schemas.TvGroupResponse)
-def create_tv_group(group: schemas.TvGroupCreate, tenxa: str = Query(...), db: Session = Depends(get_db)):
+def create_tv_group(group: schemas.TvGroupCreate, background_tasks: BackgroundTasks, tenxa: str = Query(...), db: Session = Depends(get_db)):
     tenxa_id = crud.get_tenxa_id_from_slug(db, tenxa)
     
     existing_group = db.query(models.TvGroup).filter(
@@ -57,8 +58,17 @@ def create_tv_group(group: schemas.TvGroupCreate, tenxa: str = Query(...), db: S
     db.add(db_group)
     db.commit()
     db.refresh(db_group)
+    
+    background_tasks.add_task(
+        notify_frontend, {
+            "event": "new_tv_group",
+            "group_name": group.name,
+            "counter_ids": group.counter_ids,
+            "tenxa" : tenxa
+        }
+    )
 
-    counters = db.query(models.Counter).filter(models.Counter.id.in_(db_group.counter_ids)).filter(models.TvGroup.tenxa_id == tenxa_id).all()
+    counters = db.query(models.Counter).filter(models.Counter.id.in_(db_group.counter_ids)).filter(models.Counter.tenxa_id == tenxa_id).all()
     return schemas.TvGroupResponse(
         id=db_group.id,
         name=db_group.name,
@@ -70,7 +80,7 @@ def create_tv_group(group: schemas.TvGroupCreate, tenxa: str = Query(...), db: S
 
 # Cập nhật group
 @router.put("/updates", response_model=schemas.TvGroupResponse)
-def update_tv_group(group_name: str, group: schemas.TvGroupUpdate, tenxa: str = Query(...), db: Session = Depends(get_db)):
+def update_tv_group(group_name: str, group: schemas.TvGroupUpdate, background_tasks: BackgroundTasks, tenxa: str = Query(...), db: Session = Depends(get_db)):
     tenxa_id = crud.get_tenxa_id_from_slug(db, tenxa)
     db_group = db.query(models.TvGroup).filter(models.TvGroup.name == group_name).filter(models.TvGroup.tenxa_id == tenxa_id).first()
     if not db_group:
@@ -82,8 +92,17 @@ def update_tv_group(group_name: str, group: schemas.TvGroupUpdate, tenxa: str = 
 
     db.commit()
     db.refresh(db_group)
+    
+    background_tasks.add_task(
+        notify_frontend, {
+            "event": "update_tv_group",
+            "group_name": group.name,
+            "counter_ids": group.counter_ids,
+            "tenxa" : tenxa
+        }
+    )
 
-    counters = db.query(models.Counter).filter(models.Counter.id.in_(db_group.counter_ids)).filter(models.TvGroup.tenxa_id == tenxa_id).all()
+    counters = db.query(models.Counter).filter(models.Counter.id.in_(db_group.counter_ids)).filter(models.Counter.tenxa_id == tenxa_id).all()
     return schemas.TvGroupResponse(
         id=db_group.id,
         name=db_group.name,
@@ -95,7 +114,7 @@ def update_tv_group(group_name: str, group: schemas.TvGroupUpdate, tenxa: str = 
 
 # Xóa group
 @router.delete("/")
-def delete_tv_group(group_name: str, tenxa: str = Query(...), db: Session = Depends(get_db)):
+def delete_tv_group(group_name: str, background_tasks: BackgroundTasks, tenxa: str = Query(...), db: Session = Depends(get_db)):
     tenxa_id = crud.get_tenxa_id_from_slug(db, tenxa)
     db_group = db.query(models.TvGroup).filter(models.TvGroup.name == group_name).filter(models.TvGroup.tenxa_id == tenxa_id).first()
     if not db_group:
@@ -103,6 +122,14 @@ def delete_tv_group(group_name: str, tenxa: str = Query(...), db: Session = Depe
 
     db.delete(db_group)
     db.commit()
+    background_tasks.add_task(
+        notify_frontend, {
+            "event": "delete_tv_group",
+            "group_name": db_group.name,
+            "counter_ids": db_group.counter_ids,
+            "tenxa" : tenxa
+        }
+    )
     return {"message": "Deleted successfully"}
 
 
@@ -116,5 +143,5 @@ def get_counters_by_group(group_name: str, tenxa: str = Query(...), db: Session 
     if not db_group:
         raise HTTPException(status_code=404, detail="Group not found")
 
-    counters = db.query(models.Counter).filter(models.Counter.id.in_(db_group.counter_ids)).filter(models.TvGroup.tenxa_id == tenxa_id).all()
+    counters = db.query(models.Counter).filter(models.Counter.id.in_(db_group.counter_ids)).filter(models.Counter.tenxa_id == tenxa_id).all()
     return counters
