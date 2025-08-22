@@ -3,7 +3,7 @@ from sqlalchemy.orm import Session
 from typing import List
 from app import crud, schemas, database, auth, models
 #from models import TvGroup, Counter
-from schemas import TvGroupCreate, TvGroupUpdate, TvGroupResponse, Counter
+#from schemas import TvGroupCreate, TvGroupUpdate, TvGroupResponse, Counter
 
 router = APIRouter()
 
@@ -14,15 +14,15 @@ def get_db():
     finally:
         db.close()
 # Lấy danh sách group (theo xã)
-@router.get("/", response_model=List[TvGroupResponse])
+@router.get("/", response_model=List[schemas.TvGroupResponse])
 def get_tv_groups(tenxa: str = Query(...), db: Session = Depends(get_db)):
     tenxa_id = crud.get_tenxa_id_from_slug(db, tenxa)
     groups = db.query(models.TvGroup).filter(models.TvGroup.tenxa_id == tenxa_id).all()
     result = []
     for g in groups:
-        counters = db.query(Counter).filter(Counter.id.in_(g.counter_ids)).all()
+        counters = db.query(schemas.Counter).filter(schemas.Counter.id.in_(g.counter_ids)).all()
         result.append(
-            TvGroupResponse(
+            schemas.TvGroupResponse(
                 id=g.id,
                 name=g.name,
                 tenxa_id=g.tenxa_id,
@@ -34,8 +34,8 @@ def get_tv_groups(tenxa: str = Query(...), db: Session = Depends(get_db)):
 
 
 # Tạo group mới
-@router.post("/", response_model=TvGroupResponse)
-def create_tv_group(group: TvGroupCreate, tenxa: str = Query(...), db: Session = Depends(get_db)):
+@router.post("/", response_model=schemas.TvGroupResponse)
+def create_tv_group(group: schemas.TvGroupCreate, tenxa: str = Query(...), db: Session = Depends(get_db)):
     tenxa_id = crud.get_tenxa_id_from_slug(db, tenxa)
     db_group = models.TvGroup(
         name=group.name,
@@ -46,8 +46,8 @@ def create_tv_group(group: TvGroupCreate, tenxa: str = Query(...), db: Session =
     db.commit()
     db.refresh(db_group)
 
-    counters = db.query(Counter).filter(Counter.id.in_(db_group.counter_ids)).all()
-    return TvGroupResponse(
+    counters = db.query(schemas.Counter).filter(schemas.Counter.id.in_(db_group.counter_ids)).all()
+    return schemas.TvGroupResponse(
         id=db_group.id,
         name=db_group.name,
         tenxa_id=db_group.tenxa_id,
@@ -57,8 +57,8 @@ def create_tv_group(group: TvGroupCreate, tenxa: str = Query(...), db: Session =
 
 
 # Cập nhật group
-@router.put("/updates", response_model=TvGroupResponse)
-def update_tv_group(group_name: str, group: TvGroupUpdate, tenxa: str = Query(...), db: Session = Depends(get_db)):
+@router.put("/updates", response_model=schemas.TvGroupResponse)
+def update_tv_group(group_name: str, group: schemas.TvGroupUpdate, tenxa: str = Query(...), db: Session = Depends(get_db)):
     tenxa_id = crud.get_tenxa_id_from_slug(db, tenxa)
     db_group = db.query(models.TvGroup).filter(models.TvGroup.name == group_name).filter(models.TvGroup.tenxa_id == tenxa_id).first()
     if not db_group:
@@ -71,8 +71,8 @@ def update_tv_group(group_name: str, group: TvGroupUpdate, tenxa: str = Query(..
     db.commit()
     db.refresh(db_group)
 
-    counters = db.query(Counter).filter(Counter.id.in_(db_group.counter_ids)).all()
-    return TvGroupResponse(
+    counters = db.query(schemas.Counter).filter(schemas.Counter.id.in_(db_group.counter_ids)).all()
+    return schemas.TvGroupResponse(
         id=db_group.id,
         name=db_group.name,
         tenxa_id=db_group.tenxa_id,
@@ -95,7 +95,7 @@ def delete_tv_group(group_name: str, tenxa: str = Query(...), db: Session = Depe
 
 
 # Lấy danh sách quầy theo group
-@router.get("/counters", response_model=List[Counter])
+@router.get("/counters", response_model=List[schemas.Counter])
 def get_counters_by_group(group_name: str, tenxa: str = Query(...), db: Session = Depends(get_db)):
     tenxa_id = crud.get_tenxa_id_from_slug(db, tenxa)
     db_group = db.query(models.TvGroup).filter(
@@ -104,5 +104,5 @@ def get_counters_by_group(group_name: str, tenxa: str = Query(...), db: Session 
     if not db_group:
         raise HTTPException(status_code=404, detail="Group not found")
 
-    counters = db.query(Counter).filter(Counter.id.in_(db_group.counter_ids)).all()
+    counters = db.query(schemas.Counter).filter(schemas.Counter.id.in_(db_group.counter_ids)).all()
     return counters
