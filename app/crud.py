@@ -528,3 +528,14 @@ def update_ticket_rating(
     db.commit()
     db.refresh(ticket)
     return ticket
+
+def update_tenxa_config(db: Session, tenxa_id: int, config_data: schemas.TenXaConfigUpdate):
+    tenxa = db.query(models.Tenxa).filter(models.Tenxa.id == tenxa_id).first()
+    if not tenxa:
+        return None
+
+    tenxa.feedback_timeout = config_data.feedback_timeout
+    tenxa.qr_rating = config_data.qr_rating
+    db.commit()
+    db.refresh(tenxa)
+    return tenxa

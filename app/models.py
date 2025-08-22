@@ -150,6 +150,7 @@ class Tenxa(Base):
     slug = Column(String, unique=True, index=True, nullable=False)
     auto_call = Column(Boolean, default=False)
     feedback_timeout = Column(Integer, default=15)
+    qr_rating = Column(Boolean, default=True, nullable=False)
     
 from sqlalchemy import Column, Integer, LargeBinary, DateTime
 from sqlalchemy.sql import func

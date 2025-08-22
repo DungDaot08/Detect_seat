@@ -182,3 +182,14 @@ class TvGroupResponse(TvGroupBase):
 
     class Config:
         orm_mode = True
+        
+class TenXaConfigUpdate(BaseModel):
+    feedback_timeout: int
+    qr_rating: bool
+
+class TenXaConfigResponse(BaseModel):
+    feedback_timeout: int
+    qr_rating: bool
+
+    class Config:
+        orm_mode = True
