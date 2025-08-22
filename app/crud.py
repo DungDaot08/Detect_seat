@@ -518,7 +518,7 @@ def update_ticket_rating(
         raise HTTPException(status_code=400, detail="Giá trị rating không hợp lệ")
 
     if rating_update.rating == "needs_improvement" and not rating_update.feedback:
-        raise HTTPException(status_code=400, detail="Cần nhập nội dung góp ý khi chọn 'Cần cải thiện'")
+        raise HTTPException(status_code=400, detail="Xin Quý khách vui lòng góp ý để Trung tâm cải thiện chất lượng phục vụ tốt hơn!")
 
     # Cập nhật vé
     ticket.rating = rating_update.rating
