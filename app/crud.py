@@ -511,7 +511,7 @@ def update_ticket_rating(
     # Kiểm tra hạn đánh giá
     deadline = ticket.finished_at + timedelta(minutes=timeout_minutes)
     if datetime.now(vn_tz) > deadline:
-        raise HTTPException(status_code=400, detail="Đã hết thời gian đánh giá")
+        raise HTTPException(status_code=400, detail="Thời gian thực hiện đánh giá đã kết thúc. Cảm ơn Quý Khách!")
 
     # Validate rating
     if rating_update.rating not in ["satisfied", "neutral", "needs_improvement"]:
