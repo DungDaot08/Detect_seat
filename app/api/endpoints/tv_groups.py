@@ -20,7 +20,7 @@ def get_tv_groups(tenxa: str = Query(...), db: Session = Depends(get_db)):
     groups = db.query(models.TvGroup).filter(models.TvGroup.tenxa_id == tenxa_id).all()
     result = []
     for g in groups:
-        counters = db.query(schemas.Counter).filter(schemas.Counter.id.in_(g.counter_ids)).all()
+        counters = db.query(models.Counter).filter(models.Counter.id.in_(g.counter_ids)).all()
         result.append(
             schemas.TvGroupResponse(
                 id=g.id,
@@ -46,7 +46,7 @@ def create_tv_group(group: schemas.TvGroupCreate, tenxa: str = Query(...), db: S
     db.commit()
     db.refresh(db_group)
 
-    counters = db.query(schemas.Counter).filter(schemas.Counter.id.in_(db_group.counter_ids)).all()
+    counters = db.query(models.Counter).filter(models.Counter.id.in_(db_group.counter_ids)).all()
     return schemas.TvGroupResponse(
         id=db_group.id,
         name=db_group.name,
@@ -71,7 +71,7 @@ def update_tv_group(group_name: str, group: schemas.TvGroupUpdate, tenxa: str = 
     db.commit()
     db.refresh(db_group)
 
-    counters = db.query(schemas.Counter).filter(schemas.Counter.id.in_(db_group.counter_ids)).all()
+    counters = db.query(models.Counter).filter(models.Counter.id.in_(db_group.counter_ids)).all()
     return schemas.TvGroupResponse(
         id=db_group.id,
         name=db_group.name,
@@ -104,5 +104,5 @@ def get_counters_by_group(group_name: str, tenxa: str = Query(...), db: Session 
     if not db_group:
         raise HTTPException(status_code=404, detail="Group not found")
 
-    counters = db.query(schemas.Counter).filter(schemas.Counter.id.in_(db_group.counter_ids)).all()
+    counters = db.query(models.Counter).filter(models.Counter.id.in_(db_group.counter_ids)).all()
     return counters
