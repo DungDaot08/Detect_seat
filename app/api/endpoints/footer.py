@@ -55,7 +55,7 @@ def update_config(data: schemas.FooterCreate, background_tasks: BackgroundTasks,
     )
 
 @router.put("/qr_rating", response_model=schemas.TenXaConfigResponse)
-def update_tenxa_config(
+def update_QR_raing_config(
     config_data: schemas.TenXaConfigUpdate,
     tenxa: str = Query(...),
     db: Session = Depends(get_db)
@@ -68,7 +68,7 @@ def update_tenxa_config(
 
 
 @router.get("/qr_rating", response_model=schemas.TenXaConfigResponse)
-def get_tenxa_config(tenxa: str = Query(...), db: Session = Depends(get_db)):
+def get_QR_rating_config(tenxa: str = Query(...), db: Session = Depends(get_db)):
     tenxa_id = crud.get_tenxa_id_from_slug(db, tenxa)
     tenxa_obj = db.query(models.Tenxa).filter(models.Tenxa.id == tenxa_id).first()
     if not tenxa_obj:

@@ -16,7 +16,7 @@ def get_db():
         db.close()
 # Lấy danh sách group (theo xã)
 @router.get("/", response_model=List[schemas.TvGroupResponse])
-def get_tv_groups(tenxa: str = Query(...), db: Session = Depends(get_db)):
+def get_tv_groups_by_tenxa(tenxa: str = Query(...), db: Session = Depends(get_db)):
     tenxa_id = crud.get_tenxa_id_from_slug(db, tenxa)
     groups = db.query(models.TvGroup).filter(models.TvGroup.tenxa_id == tenxa_id).all()
     result = []
