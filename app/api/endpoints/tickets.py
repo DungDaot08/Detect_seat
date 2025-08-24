@@ -1,11 +1,11 @@
 from fastapi import APIRouter, Depends, Query, BackgroundTasks, HTTPException
 from sqlalchemy.orm import Session
-from app import crud, schemas, database
+from app import crud, schemas, database, jwt
 from typing import List, Optional
 from app.api.endpoints.realtime import notify_frontend
 from datetime import datetime, timedelta
 from pytz import timezone
-from app.utils.jwt import create_ticket_token, verify_ticket_token
+#from app.utils.jwt import create_ticket_token, verify_ticket_token
 
 
 vn_tz = timezone("Asia/Ho_Chi_Minh")
@@ -59,7 +59,7 @@ def create_ticket_new(
     counter_name = crud.get_counter_name_from_counter_id(db, new_ticket.counter_id, tenxa_id)
 
     # Tạo JWT token cho QR
-    token = create_ticket_token({
+    token = jwt.create_ticket_token({
         "ticket_number": new_ticket.number,
         "tenxa": tenxa
     })
@@ -164,7 +164,7 @@ def submit_ticket_feedback_new(
     token: str = Query(...),  # hoặc trong body
     db: Session = Depends(get_db)
 ):
-    payload = verify_ticket_token(token)
+    payload = jwt.verify_ticket_token(token)
     ticket_number = payload["ticket_number"]
     tenxa = payload["tenxa"]
 
@@ -179,7 +179,7 @@ def get_ticket_feedback_info_new(
     db: Session = Depends(get_db)
 ):
     # Giải mã token để lấy thông tin vé
-    payload = verify_ticket_token(token)
+    payload = jwt.verify_ticket_token(token)
     ticket_number = payload["ticket_number"]
     tenxa = payload["tenxa"]
 
