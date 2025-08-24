@@ -5,7 +5,7 @@ from typing import List, Optional
 from app.api.endpoints.realtime import notify_frontend
 from datetime import datetime, timedelta
 from pytz import timezone
-from app.utils.jwt import create_ticket_token, verify_ticket_token
+from kiosk_api.app.utils.jwt_ultils import create_ticket_token, verify_ticket_token
 
 
 vn_tz = timezone("Asia/Ho_Chi_Minh")
