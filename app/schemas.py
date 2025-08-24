@@ -33,6 +33,7 @@ class Ticket(BaseModel):
     id: int
     number: int
     counter_id: int
+    counter_name: str
     created_at: datetime
     status: str
     called_at: Optional[datetime] = None

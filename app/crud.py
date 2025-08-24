@@ -26,6 +26,10 @@ def get_slug_from_tenxa_id(db: Session, tenxa_id: int) ->Optional[str]:
     tenxa = db.query(models.Tenxa).filter(models.Tenxa.id == tenxa_id).first()
     return tenxa.slug if tenxa else None
 
+def get_counter_name_from_counter_id(db: Session, counter_id: int, tenxa_id: int) ->Optional[str]:
+    counter = db.query(models.Counter).filter(models.Counter.id == counter_id).filter(models.Counter.tenxa_id == tenxa_id).first()
+    return counter.name if counter else None
+
 def get_user_by_username(db: Session, tenxa_id: int, username: str):
     return db.query(models.User).filter(models.User.tenxa_id == tenxa_id).filter(models.User.username == username).first()
 
@@ -127,10 +131,12 @@ def create_ticket(db: Session, tenxa_id: int, ticket: schemas.TicketCreate) -> m
     )
 
     next_number = 1 if not latest else latest.number + 1
+    counter_name = get_counter_name_from_counter_id(db, ticket.counter_id, tenxa_id)
 
     db_ticket = models.Ticket(
         number=next_number,
         counter_id=ticket.counter_id,
+        counter_name=counter_name,
         tenxa_id=tenxa_id
     )
     db.add(db_ticket)

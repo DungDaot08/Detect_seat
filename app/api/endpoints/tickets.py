@@ -29,11 +29,13 @@ def create_ticket(
 
     # Gán tenant_id vào ticket
     new_ticket = crud.create_ticket(db, tenxa_id, ticket)
+    counter_name = crud.get_counter_name_from_counter_id(db, new_ticket.counter_id, tenxa_id)
 
     background_tasks.add_task(
         notify_frontend, {
             "event": "new_ticket",
             "ticket_number": new_ticket.number,
+            "counter_name": counter_name,
             "counter_id": new_ticket.counter_id,
             "tenxa" : tenxa
         }
