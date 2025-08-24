@@ -153,6 +153,7 @@ class FooterResponse(FooterBase):
     
 class TicketFeedbackInfo(BaseModel):
     ticket_number: int
+    counter_name: str
     status: str
     finished_at: Optional[datetime] = None
     can_rate: bool
