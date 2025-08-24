@@ -136,7 +136,6 @@ def create_ticket(db: Session, tenxa_id: int, ticket: schemas.TicketCreate) -> m
     db_ticket = models.Ticket(
         number=next_number,
         counter_id=ticket.counter_id,
-        counter_name=counter_name,
         tenxa_id=tenxa_id
     )
     db.add(db_ticket)

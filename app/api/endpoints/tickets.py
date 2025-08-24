@@ -41,7 +41,8 @@ def create_ticket(
         }
     )
 
-    return new_ticket
+    #return new_ticket
+    return {**new_ticket.__dict__, "counter_name": counter_name}    
 
 @router.get("/waiting", response_model=List[schemas.Ticket])
 def get_waiting_tickets(
