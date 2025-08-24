@@ -18,36 +18,10 @@ def get_db():
     try:
         yield db
     finally:
-        db.close()
+        db.close() 
 
-@router.post("/", response_model=schemas.Ticket)
+@router.post("/", response_model=dict)
 def create_ticket(
-    ticket: schemas.TicketCreate,
-    background_tasks: BackgroundTasks,  
-    tenxa: str = Query(...),
-    db: Session = Depends(get_db)
-):
-    tenxa_id = crud.get_tenxa_id_from_slug(db, tenxa)
-
-    # Gán tenant_id vào ticket
-    new_ticket = crud.create_ticket(db, tenxa_id, ticket)
-    counter_name = crud.get_counter_name_from_counter_id(db, new_ticket.counter_id, tenxa_id)
-
-    background_tasks.add_task(
-        notify_frontend, {
-            "event": "new_ticket",
-            "ticket_number": new_ticket.number,
-            "counter_name": counter_name,
-            "counter_id": new_ticket.counter_id,
-            "tenxa" : tenxa
-        }
-    )
-
-    #return new_ticket
-    return {**new_ticket.__dict__, "counter_name": counter_name}    
-
-@router.post("/new", response_model=dict)
-def create_ticket_new(
     ticket: schemas.TicketCreate,
     background_tasks: BackgroundTasks,  
     tenxa: str = Query(...),
@@ -158,7 +132,7 @@ def submit_ticket_feedback(
 
     return crud.update_ticket_rating(db, tenxa_id, ticket_number, feedback_data, feedback_timeout)
 
-@router.post("/feedback_new", response_model=schemas.Ticket)
+@router.post("/feedback", response_model=schemas.Ticket)
 def submit_ticket_feedback_new(
     feedback_data: schemas.TicketRatingUpdate,
     token: str = Query(...),  # hoặc trong body
@@ -173,7 +147,7 @@ def submit_ticket_feedback_new(
 
     return crud.update_ticket_rating(db, tenxa_id, ticket_number, feedback_data, feedback_timeout)
 
-@router.get("/feedback_new", response_model=schemas.TicketFeedbackInfo)
+@router.get("/feedback", response_model=schemas.TicketFeedbackInfo)
 def get_ticket_feedback_info_new(
     token: str = Query(...),
     db: Session = Depends(get_db)
