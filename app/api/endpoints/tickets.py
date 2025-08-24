@@ -35,7 +35,8 @@ def create_ticket(
     # Tạo JWT token cho QR
     token = create_ticket_token({
         "ticket_number": new_ticket.number,
-        "tenxa": tenxa
+        "tenxa": tenxa,
+        "counter_name": counter_name
     })
 
     background_tasks.add_task(
@@ -156,6 +157,7 @@ def get_ticket_feedback_info_new(
     payload = verify_ticket_token(token)
     ticket_number = payload["ticket_number"]
     tenxa = payload["tenxa"]
+    counter_name = payload["counter_name"]
 
     tenxa_id = crud.get_tenxa_id_from_slug(db, tenxa)
     ticket = crud.get_ticket(db, tenxa_id, ticket_number)
@@ -175,6 +177,7 @@ def get_ticket_feedback_info_new(
 
     return {
         "ticket_number": ticket.number,
+        "counter_name": counter_name,
         "status": ticket.status,
         "finished_at": ticket.finished_at,
         "can_rate": not expired,
