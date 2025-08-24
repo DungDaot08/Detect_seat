@@ -5,6 +5,7 @@ from typing import List, Optional
 from app.api.endpoints.realtime import notify_frontend
 from datetime import datetime, timedelta
 from pytz import timezone
+from utils.jwt import create_ticket_token, verify_ticket_token
 
 vn_tz = timezone("Asia/Ho_Chi_Minh")
 
@@ -44,6 +45,41 @@ def create_ticket(
     #return new_ticket
     return {**new_ticket.__dict__, "counter_name": counter_name}    
 
+@router.post("/new", response_model=dict)
+def create_ticket_new(
+    ticket: schemas.TicketCreate,
+    background_tasks: BackgroundTasks,  
+    tenxa: str = Query(...),
+    db: Session = Depends(get_db)
+):
+    tenxa_id = crud.get_tenxa_id_from_slug(db, tenxa)
+
+    new_ticket = crud.create_ticket(db, tenxa_id, ticket)
+    counter_name = crud.get_counter_name_from_counter_id(db, new_ticket.counter_id, tenxa_id)
+
+    # Tạo JWT token cho QR
+    token = create_ticket_token({
+        "ticket_number": new_ticket.number,
+        "tenxa": tenxa
+    })
+
+    background_tasks.add_task(
+        notify_frontend, {
+            "event": "new_ticket",
+            "ticket_number": new_ticket.number,
+            "counter_name": counter_name,
+            "counter_id": new_ticket.counter_id,
+            "tenxa": tenxa,
+            "token": token  # nếu cần cho kiosk in luôn QR
+        }
+    )
+
+    return {
+        **new_ticket.__dict__,
+        "counter_name": counter_name,
+        "token": token
+    }
+    
 @router.get("/waiting", response_model=List[schemas.Ticket])
 def get_waiting_tickets(
     counter_id: Optional[int] = Query(None, description="ID của quầy (tùy chọn)"),
@@ -120,4 +156,54 @@ def submit_ticket_feedback(
     feedback_timeout = crud.get_feedback_timeout(db, tenxa_id)
 
     return crud.update_ticket_rating(db, tenxa_id, ticket_number, feedback_data, feedback_timeout)
+
+@router.post("/feedback_new", response_model=schemas.Ticket)
+def submit_ticket_feedback_new(
+    feedback_data: schemas.TicketRatingUpdate,
+    token: str = Query(...),  # hoặc trong body
+    db: Session = Depends(get_db)
+):
+    payload = verify_ticket_token(token)
+    ticket_number = payload["ticket_number"]
+    tenxa = payload["tenxa"]
+
+    tenxa_id = crud.get_tenxa_id_from_slug(db, tenxa)
+    feedback_timeout = crud.get_feedback_timeout(db, tenxa_id)
+
+    return crud.update_ticket_rating(db, tenxa_id, ticket_number, feedback_data, feedback_timeout)
+
+@router.get("/feedback_new", response_model=schemas.TicketFeedbackInfo)
+def get_ticket_feedback_info_new(
+    token: str = Query(...),
+    db: Session = Depends(get_db)
+):
+    # Giải mã token để lấy thông tin vé
+    payload = verify_ticket_token(token)
+    ticket_number = payload["ticket_number"]
+    tenxa = payload["tenxa"]
+
+    tenxa_id = crud.get_tenxa_id_from_slug(db, tenxa)
+    ticket = crud.get_ticket(db, tenxa_id, ticket_number)
+
+    if not ticket:
+        raise HTTPException(status_code=404, detail="Không tìm thấy vé")
+
+    if not ticket.finished_at:
+        raise HTTPException(status_code=400, detail="Vé chưa được tiếp đón xong")
+
+    # lấy thời gian timeout từ bảng tenxa
+    feedback_timeout = crud.get_feedback_timeout(db, tenxa_id)
+
+    # kiểm tra thời gian còn hạn đánh giá
+    deadline = ticket.finished_at + timedelta(minutes=feedback_timeout)
+    expired = datetime.now(vn_tz) > deadline
+
+    return {
+        "ticket_number": ticket.number,
+        "status": ticket.status,
+        "finished_at": ticket.finished_at,
+        "can_rate": not expired,
+        "rating": ticket.rating,
+        "feedback": ticket.feedback
+    }
 
