@@ -408,7 +408,7 @@ class FeedbackItem(BaseModel):
     ticket_number: int
     counter_id: int
     rating: str
-    feedback: str
+    feedback: Optional[str] = None
     created_at: datetime
 
 @router.get("/feedbacks", response_model=List[FeedbackItem])
