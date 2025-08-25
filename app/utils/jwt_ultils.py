@@ -29,7 +29,7 @@ def verify_ticket_token1(token: str) -> Dict:
 
 from itsdangerous import URLSafeTimedSerializer
 
-SECRET_KEY = "super_secret_key"
+SECRET_KEY = "key"
 s = URLSafeTimedSerializer(SECRET_KEY)
 
 # Tạo token
