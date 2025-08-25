@@ -425,7 +425,7 @@ def list_feedbacks(
 
     q = db.query(Ticket).filter(
         Ticket.tenxa_id == tenxa_id,
-        Ticket.feedback.isnot(None),
+        #Ticket.feedback.isnot(None),
         func.date(Ticket.created_at).between(start, end)
     )
     if rating:
