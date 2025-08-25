@@ -7,7 +7,7 @@ SECRET_KEY = "key"  # nên đặt trong config/env
 ALGORITHM = "HS256"
 EXPIRE_SECONDS = 60 * 30  # 30 phút
 
-def create_ticket_token(data: Dict, expire_seconds: int = EXPIRE_SECONDS):
+def create_ticket_token1(data: Dict, expire_seconds: int = EXPIRE_SECONDS):
     to_encode = data.copy()
     now = int(time.time())
     to_encode.update({
@@ -18,7 +18,7 @@ def create_ticket_token(data: Dict, expire_seconds: int = EXPIRE_SECONDS):
     encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
     return encoded_jwt
 
-def verify_ticket_token(token: str) -> Dict:
+def verify_ticket_token1(token: str) -> Dict:
     try:
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
         return payload
@@ -26,3 +26,18 @@ def verify_ticket_token(token: str) -> Dict:
         raise ValueError("Token expired")
     except jwt.InvalidTokenError:
         raise ValueError("Invalid token")
+
+from itsdangerous import URLSafeTimedSerializer
+
+SECRET_KEY = "super_secret_key"
+s = URLSafeTimedSerializer(SECRET_KEY)
+
+# Tạo token
+def create_ticket_token(data: dict) -> str:
+    return s.dumps(data)
+
+# Verify token
+def verify_ticket_token(token: str, max_age: int = 1800) -> dict:
+    return s.loads(token, max_age=max_age)
+
+
