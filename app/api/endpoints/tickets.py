@@ -141,9 +141,9 @@ def submit_ticket_feedback_new(
 ):
     payload = verify_ticket_token(token)
     ticket_number = payload["t"]
-    tenxa = payload["x"]
+    tenxa_id = payload["x"]
 
-    tenxa_id = crud.get_tenxa_id_from_slug(db, tenxa)
+    #tenxa_id = crud.get_tenxa_id_from_slug(db, tenxa)
     feedback_timeout = crud.get_feedback_timeout(db, tenxa_id)
 
     return crud.update_ticket_rating(db, tenxa_id, ticket_number, feedback_data, feedback_timeout)
