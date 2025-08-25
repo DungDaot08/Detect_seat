@@ -35,8 +35,8 @@ def create_ticket(
     # Tạo JWT token cho QR
     token = create_ticket_token({
         "tn": new_ticket.number,
-        "tx": tenxa,
-        "cn": counter_name
+        "tx": tenxa
+        #"cn": counter_name
     })
 
     background_tasks.add_task(
