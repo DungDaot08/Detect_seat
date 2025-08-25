@@ -34,8 +34,8 @@ def create_ticket(
 
     # Tạo JWT token cho QR
     token = create_ticket_token({
-        "tn": new_ticket.number,
-        "tx": tenxa_id,
+        "t": new_ticket.number,
+        "x": tenxa_id
         #"ci": new_ticket.counter_id
     })
 
@@ -140,8 +140,8 @@ def submit_ticket_feedback_new(
     db: Session = Depends(get_db)
 ):
     payload = verify_ticket_token(token)
-    ticket_number = payload["tn"]
-    tenxa = payload["tx"]
+    ticket_number = payload["t"]
+    tenxa = payload["x"]
 
     tenxa_id = crud.get_tenxa_id_from_slug(db, tenxa)
     feedback_timeout = crud.get_feedback_timeout(db, tenxa_id)
@@ -155,8 +155,8 @@ def get_ticket_feedback_info_new(
 ):
     # Giải mã token để lấy thông tin vé
     payload = verify_ticket_token(token)
-    ticket_number = payload["tn"]
-    tenxa_id = payload["tx"]
+    ticket_number = payload["t"]
+    tenxa_id = payload["x"]
     #counter_id = payload["ci"]
 
     #tenxa_id = crud.get_tenxa_id_from_slug(db, tenxa)
