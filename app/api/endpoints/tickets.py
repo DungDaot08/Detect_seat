@@ -35,8 +35,8 @@ def create_ticket(
     # Tạo JWT token cho QR
     token = create_ticket_token({
         "tn": new_ticket.number,
-        "tx": tenxa
-        #"cn": counter_name
+        "tx": tenxa,
+        #"ci": new_ticket.counter_id
     })
 
     background_tasks.add_task(
@@ -157,10 +157,11 @@ def get_ticket_feedback_info_new(
     payload = verify_ticket_token(token)
     ticket_number = payload["tn"]
     tenxa = payload["tx"]
-    counter_name = payload["cn"]
+    #counter_id = payload["ci"]
 
     tenxa_id = crud.get_tenxa_id_from_slug(db, tenxa)
     ticket = crud.get_ticket(db, tenxa_id, ticket_number)
+    counter_name = crud.get_counter_name_from_counter_id(db, ticket.counter_id, tenxa_id)
 
     if not ticket:
         raise HTTPException(status_code=404, detail="Không tìm thấy vé")
