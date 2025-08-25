@@ -390,7 +390,7 @@ def rating_per_counter(
     )
 
     # Gom theo counter
-    data = defaultdict(lambda: {"satisfied": 0, "neutral": 0, "need_improvement": 0})
+    data = defaultdict(lambda: {"satisfied": 0, "neutral": 0, "needs_improvement": 0})
     for counter_id, rating, count in result:
         data[counter_id][rating] = count
 
@@ -399,7 +399,7 @@ def rating_per_counter(
             counter_id=cid,
             satisfied=vals["satisfied"],
             neutral=vals["neutral"],
-            need_improvement=vals["need_improvement"]
+            need_improvement=vals["needs_improvement"]
         )
         for cid, vals in data.items()
     ]
@@ -413,7 +413,7 @@ class FeedbackItem(BaseModel):
 
 @router.get("/feedbacks", response_model=List[FeedbackItem])
 def list_feedbacks(
-    rating: Optional[str] = Query(None, regex="^(satisfied|neutral|need_improvement)$"),
+    rating: Optional[str] = Query(None, regex="^(satisfied|neutral|needs_improvement)$"),
     counter_id: Optional[int] = Query(None),
     start_date: Optional[date] = Query(None),
     end_date: Optional[date] = Query(None),
