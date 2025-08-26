@@ -33,7 +33,7 @@ class Ticket(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     number = Column(Integer, nullable=False)
-    counter_id = Column(Integer, nullable=False)
+    counter_id = Column(Integer, nullable=True)
     created_at = Column(DateTime, default=func.now())
     status = Column(String(20), default="waiting")
     called_at = Column(DateTime, nullable=True, default=None)
