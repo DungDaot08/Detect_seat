@@ -162,6 +162,8 @@ class Tenxa(Base):
     auto_call = Column(Boolean, default=False)
     feedback_timeout = Column(Integer, default=15)
     qr_rating = Column(Boolean, default=True, nullable=False)
+    postfix = Column(String(50), nullable=False, default="default")
+    password = Column(String(255), nullable=False, default="123456")
     
 from sqlalchemy import Column, Integer, LargeBinary, DateTime
 from sqlalchemy.sql import func

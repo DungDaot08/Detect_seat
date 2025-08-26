@@ -157,8 +157,8 @@ def call_next_manually(
     # Không có vé, vẫn gửi sự kiện và trả 204
     return None
 
-@router.post("/upsert-counter", response_model=schemas.Counter)
-def upsert_counter(
+@router.post("/upsert-counter-old", response_model=schemas.Counter)
+def upsert_counter_old(
     tenxa: str,
     background_tasks: BackgroundTasks,
     data: schemas.CounterUpsertRequest,
@@ -286,3 +286,71 @@ def delete_counter(
         )
 
     return {"message": "Xóa counter thành công", "counter_id": counter_id}
+
+@router.post("/upsert-counter", response_model=schemas.Counter)
+def upsert_counter(
+    tenxa: str,
+    background_tasks: BackgroundTasks,
+    data: schemas.CounterUpsertRequest,
+    db: Session = Depends(get_db)
+):
+    tenxa_id = crud.get_tenxa_id_from_slug(db, tenxa)
+
+    # Lấy record tenxa để dùng postfix và password
+    tenxa_record = db.query(models.TenXa).filter(models.TenXa.id == tenxa_id).first()
+    if not tenxa_record:
+        raise HTTPException(status_code=404, detail="Tenxa not found")
+
+    if data.counter_id == 0:
+        max_id = db.query(func.max(models.Counter.id))\
+                   .filter(models.Counter.tenxa_id == tenxa_id)\
+                   .scalar() or 0
+        new_id = max_id + 1
+        data.counter_id = new_id
+    counter = db.query(models.Counter)\
+                .filter(models.Counter.id == data.counter_id, models.Counter.tenxa_id == tenxa_id)\
+                .first()
+
+    if counter:
+        counter.name = data.name
+    else:
+        max_code = db.query(func.max(models.Counter.code)).scalar() or 0
+        counter = models.Counter(
+            id=data.counter_id,
+            tenxa_id=tenxa_id,
+            name=data.name,
+            code=max_code + 1
+        )
+        db.add(counter)
+        db.commit()
+        db.refresh(counter)
+
+        # Hash password từ bảng tenxa
+        hashed_password = auth.hash_password(tenxa_record.password)
+
+        db_user = models.User(
+            username="quay" + str(new_id) + "." + tenxa_record.postfix,
+            hashed_password=hashed_password,
+            full_name="quay" + str(new_id) + tenxa_record.postfix,
+            role="officer",
+            tenxa_id=tenxa_id,
+            counter_id=new_id
+        )
+        db.add(db_user)
+        db.commit()
+        db.refresh(db_user)
+
+    db.add(counter)
+    db.commit()
+    db.refresh(counter)
+
+    background_tasks.add_task(
+        notify_frontend,
+        {
+            "event": "upsert_counter",
+            "counter_id": data.counter_id,
+            "counter_name": data.name,
+            "tenxa": tenxa,
+        }
+    )
+    return counter

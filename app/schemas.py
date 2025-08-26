@@ -98,8 +98,6 @@ class CounterPauseLog(BaseModel):
 class CounterUpsertRequest(BaseModel):
     counter_id: Optional[int] = None
     name: str
-    postfix: str   # chuyển vào body
-    password: str 
 
     class Config:
         orm_mode = True
