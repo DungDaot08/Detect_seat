@@ -101,7 +101,7 @@ from fastapi.responses import StreamingResponse
 
 @router.post("/generate_counter_audio")
 def generate_counter_audio(
-    data: schemas.CounterUpsertRequest,
+    data: schemas.CounterUpsertRequestTTS,
     tenxa: str = Query(...),
     db: Session = Depends(get_db)
 ):

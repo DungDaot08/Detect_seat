@@ -4,7 +4,7 @@ from typing import List, Optional
 from rapidfuzz import fuzz
 from datetime import datetime, time
 from sqlalchemy import extract
-from app.models import Procedure, Counter, CounterField, Ticket
+from app.models import Procedure, Counter, CounterField, Ticket, Tenxa
 from app import models, schemas, auth
 from passlib.context import CryptContext
 from fastapi import HTTPException
@@ -13,6 +13,36 @@ from pytz import timezone
 pwd_context = CryptContext(schemes=["pbkdf2_sha256"], deprecated="auto")
 vn_tz = timezone("Asia/Ho_Chi_Minh")
 
+import os
+import redis
+from urllib.parse import urlparse
+
+redis_url = os.getenv("REDIS_URL")
+url = urlparse(redis_url)
+
+r = redis.Redis(
+    host=url.hostname,
+    port=url.port,
+    password=url.password,
+    ssl=url.scheme == "rediss",
+    decode_responses=True
+)
+
+def acquire_ticket_lock(tenxa_id: int, counter_id: int, cooldown: int = 2) -> bool:
+    """
+    Trả về True nếu lock thành công (nghĩa là cho phép tạo vé).
+    Trả về False nếu request bị lặp trong cooldown giây.
+    """
+    key = f"ticket_lock:{tenxa_id}:{counter_id}"
+    was_set = r.set(key, "1", ex=cooldown, nx=True)  # nx=True: chỉ set nếu chưa tồn tại
+    return was_set is not None
+
+
+def get_feedback_timeout(db: Session, tenxa_id: int) -> int:
+    tenxa = db.query(models.Tenxa).filter(models.Tenxa.id == tenxa_id).first()
+    return tenxa.feedback_timeout if tenxa and tenxa.feedback_timeout else 15
+
+
 def get_tenxa_id_from_slug(db: Session, slug: str) -> Optional[int]:
     tenxa = db.query(models.Tenxa).filter(models.Tenxa.slug == slug).first()
     return tenxa.id if tenxa else None
@@ -20,6 +50,10 @@ def get_tenxa_id_from_slug(db: Session, slug: str) -> Optional[int]:
 def get_slug_from_tenxa_id(db: Session, tenxa_id: int) ->Optional[str]:
     tenxa = db.query(models.Tenxa).filter(models.Tenxa.id == tenxa_id).first()
     return tenxa.slug if tenxa else None
+
+def get_counter_name_from_counter_id(db: Session, counter_id: int, tenxa_id: int) ->Optional[str]:
+    counter = db.query(models.Counter).filter(models.Counter.id == counter_id).filter(models.Counter.tenxa_id == tenxa_id).first()
+    return counter.name if counter else None
 
 def get_user_by_username(db: Session, tenxa_id: int, username: str):
     return db.query(models.User).filter(models.User.tenxa_id == tenxa_id).filter(models.User.username == username).first()
@@ -92,6 +126,9 @@ from pytz import timezone
 
 def create_ticket(db: Session, tenxa_id: int, ticket: schemas.TicketCreate) -> models.Ticket:
     now = datetime.now(timezone("Asia/Ho_Chi_Minh"))
+    
+    if not acquire_ticket_lock(tenxa_id, ticket.counter_id):
+        raise HTTPException(status_code=429, detail="Bạn vừa lấy vé, vui lòng chờ vài giây")
 
     if tenxa_id == 300:
         # Reset vé lúc 17:30 hôm nay
@@ -122,6 +159,7 @@ def create_ticket(db: Session, tenxa_id: int, ticket: schemas.TicketCreate) -> m
     )
 
     next_number = 1 if not latest else latest.number + 1
+    #counter_name = get_counter_name_from_counter_id(db, ticket.counter_id, tenxa_id)
 
     db_ticket = models.Ticket(
         number=next_number,
@@ -133,7 +171,24 @@ def create_ticket(db: Session, tenxa_id: int, ticket: schemas.TicketCreate) -> m
     db.refresh(db_ticket)
     return db_ticket
 
-
+def get_ticket(db: Session, tenxa_id: int, ticket_number: int):
+    """
+    Lấy thông tin 1 ticket theo số vé (ticket_number) và xã (tenxa_id).
+    """
+    today = datetime.now(vn_tz).date()
+    start_of_day = datetime.combine(today, time.min, tzinfo=vn_tz)
+    end_of_day = datetime.combine(today, time.max, tzinfo=vn_tz)
+    return (
+        db.query(models.Ticket)
+        .filter(
+            models.Ticket.created_at >= start_of_day,
+            models.Ticket.created_at <= end_of_day,
+            models.Ticket.tenxa_id == tenxa_id,
+            models.Ticket.number == ticket_number
+        )
+        .first()
+    )
+    
 def get_waiting_tickets(db: Session, tenxa_id: int, counter_id: Optional[int] = None):
     #vn_tz = ZoneInfo("Asia/Ho_Chi_Minh")
     today = datetime.now(vn_tz).date()
@@ -420,6 +475,7 @@ def create_user(db: Session, tenxa_id: int, user: schemas.UserCreate):
             ).scalar()
 
             counter_id_check = (max_counter_id or 0) + 1
+            
         else:
             counter_id_check = user.counter_id
             
@@ -458,3 +514,61 @@ def upsert_footer(db: Session, tenxa_id: int, work_time: str, hotline: str, head
     db.commit()
     db.refresh(footer)
     return footer
+
+def update_ticket_rating(
+    db: Session,
+    tenxa_id: int,
+    ticket_number: int,
+    rating_update: schemas.TicketRatingUpdate,
+    timeout_minutes: int
+):
+    today = datetime.now(vn_tz).date()
+    start_of_day = datetime.combine(today, time.min, tzinfo=vn_tz)
+    end_of_day = datetime.combine(today, time.max, tzinfo=vn_tz)
+    
+    ticket = (
+        db.query(models.Ticket)
+        .filter(models.Ticket.tenxa_id == tenxa_id)
+        .filter(models.Ticket.number == ticket_number)
+        .filter(Ticket.created_at >= start_of_day)
+        .filter(Ticket.created_at <= end_of_day)
+        .first()
+    )
+
+    if not ticket:
+        raise HTTPException(status_code=404, detail="Không tìm thấy vé")
+
+    if not ticket.finished_at:
+        raise HTTPException(status_code=400, detail="Vé chưa được tiếp đón xong")
+
+    # Kiểm tra hạn đánh giá
+    deadline = ticket.finished_at + timedelta(minutes=timeout_minutes)
+    if datetime.now(vn_tz) > deadline:
+        raise HTTPException(status_code=400, detail="Thời gian thực hiện đánh giá đã kết thúc. Cảm ơn Quý Khách!")
+
+    # Validate rating
+    if rating_update.rating not in ["satisfied", "neutral", "needs_improvement"]:
+        raise HTTPException(status_code=400, detail="Giá trị rating không hợp lệ")
+
+    if rating_update.rating == "needs_improvement" and not rating_update.feedback:
+        raise HTTPException(status_code=400, detail="Xin Quý khách vui lòng nhập nội dung góp ý để Trung tâm cải thiện chất lượng phục vụ tốt hơn!")
+
+    # Cập nhật vé
+    ticket.rating = rating_update.rating
+    ticket.feedback = rating_update.feedback
+    ticket.rated_at = datetime.now(vn_tz)
+
+    db.commit()
+    db.refresh(ticket)
+    return ticket
+
+def update_tenxa_config(db: Session, tenxa_id: int, config_data: schemas.TenXaConfigUpdate):
+    tenxa = db.query(models.Tenxa).filter(models.Tenxa.id == tenxa_id).first()
+    if not tenxa:
+        return None
+
+    tenxa.feedback_timeout = config_data.feedback_timeout
+    tenxa.qr_rating = config_data.qr_rating
+    db.commit()
+    db.refresh(tenxa)
+    return tenxa

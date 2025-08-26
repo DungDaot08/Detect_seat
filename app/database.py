@@ -16,7 +16,6 @@ engine = create_engine(
     pool_recycle=1800,   # reset sau 30 phút
     pool_pre_ping=True   # kiểm tra connection sống
 )
-
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 Base = declarative_base()

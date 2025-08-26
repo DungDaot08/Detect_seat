@@ -2,7 +2,7 @@
 
 from fastapi import APIRouter, Depends, HTTPException, Query, BackgroundTasks
 from sqlalchemy.orm import Session
-from app import crud, schemas, database
+from app import crud, schemas, database, models
 from app.api.endpoints.realtime import notify_frontend
 
 router = APIRouter()
@@ -53,3 +53,24 @@ def update_config(data: schemas.FooterCreate, background_tasks: BackgroundTasks,
         hotline=footer.hotline,
         header= footer.header
     )
+
+@router.put("/qr_rating", response_model=schemas.TenXaConfigResponse)
+def update_QR_raing_config(
+    config_data: schemas.TenXaConfigUpdate,
+    tenxa: str = Query(...),
+    db: Session = Depends(get_db)
+):
+    tenxa_id = crud.get_tenxa_id_from_slug(db, tenxa)
+    tenxa_obj = crud.update_tenxa_config(db, tenxa_id, config_data)
+    if not tenxa_obj:
+        raise HTTPException(status_code=404, detail="Không tìm thấy đơn vị")
+    return tenxa_obj
+
+
+@router.get("/qr_rating", response_model=schemas.TenXaConfigResponse)
+def get_QR_rating_config(tenxa: str = Query(...), db: Session = Depends(get_db)):
+    tenxa_id = crud.get_tenxa_id_from_slug(db, tenxa)
+    tenxa_obj = db.query(models.Tenxa).filter(models.Tenxa.id == tenxa_id).first()
+    if not tenxa_obj:
+        raise HTTPException(status_code=404, detail="Không tìm thấy đơn vị")
+    return tenxa_obj

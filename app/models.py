@@ -1,6 +1,7 @@
-from sqlalchemy import Column, Integer, String, ForeignKey, UniqueConstraint, DateTime, func, Boolean, Text, Enum
+from sqlalchemy import Column, Integer, String, ForeignKey, UniqueConstraint, DateTime, func, Boolean, Text, Enum, ForeignKeyConstraint
 from sqlalchemy.orm import relationship
 from app.database import Base
+from sqlalchemy.dialects.postgresql import ARRAY
 from sqlalchemy import Enum as PgEnum
 import enum
 
@@ -32,12 +33,23 @@ class Ticket(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     number = Column(Integer, nullable=False)
-    counter_id = Column(Integer, ForeignKey("counters.id"), nullable=False)
+    counter_id = Column(Integer, nullable=False)
     created_at = Column(DateTime, default=func.now())
     status = Column(String(20), default="waiting")
     called_at = Column(DateTime, nullable=True, default=None)
     finished_at = Column(DateTime, nullable=True, default=None)
-    tenxa_id = Column(Integer, ForeignKey("tenxa.id"), nullable=False)
+    rating = Column(Enum("satisfied", "neutral", "needs_improvement", name="rating_enum"), nullable=True, default="satisfied")
+    feedback = Column(Text, nullable=True)
+    rated_at = Column(DateTime, nullable=True)
+    tenxa_id = Column(Integer, nullable=False)
+    
+    #__table_args__ = (
+    #    ForeignKeyConstraint(
+    #        ["counter_id", "tenxa_id"],
+    #        ["counters.id", "counters.tenxa_id"]
+    #    ),
+    #)
+    
 
     #counter = relationship("Counter", back_populates="tickets")
     tenxa = relationship("Tenxa")
@@ -50,6 +62,10 @@ class Counter(Base):
     #timeout_seconds = Column(Integer, default=60)
     status = Column(String(20), nullable=False, default="active")
     tenxa_id = Column(Integer, ForeignKey("tenxa.id"), nullable=False)
+    
+    #__table_args__ = (
+    #    UniqueConstraint("id", "tenxa_id", name="uq_counter_id_per_tenxa"),
+    #)
 
     #counter_fields = relationship("CounterField", back_populates="counter")
     #seats = relationship("Seat", back_populates="counter")
@@ -62,7 +78,7 @@ class CounterField(Base):
     __tablename__ = "counter_field"
 
     id = Column(Integer, primary_key=True, index=True)
-    counter_id = Column(Integer, ForeignKey("counters.id"))
+    counter_id = Column(Integer)
     field_id = Column(Integer, ForeignKey("fields.id"))
     tenxa_id = Column(Integer, ForeignKey("tenxa.id"), nullable=False)
 
@@ -93,7 +109,7 @@ class Seat(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     name = Column(String(100), nullable=False)
-    counter_id = Column(Integer, ForeignKey("counters.id"), nullable=False)
+    counter_id = Column(Integer, nullable=False)
     type = Column(PgEnum(SeatType), nullable=False, default="client")
     status = Column(Boolean, default=False)  # True = Có người, False = Trống
     last_empty_time = Column(DateTime, nullable=True)
@@ -107,7 +123,7 @@ class CounterPauseLog(Base):
     __tablename__ = "counter_pause_logs"
 
     id = Column(Integer, primary_key=True, index=True)
-    counter_id = Column(Integer, ForeignKey("counters.id"), nullable=False)
+    counter_id = Column(Integer, nullable=False)
     reason = Column(Text, nullable=False)
     created_at = Column(DateTime, server_default=func.now())
     start_time = Column(DateTime, nullable=True, default=func.now())  # 🆕 thời gian bắt đầu pause
@@ -131,7 +147,7 @@ class User(Base):
     full_name = Column(String(100))
     role = Column(Enum(Role), nullable=False)
     is_active = Column(Boolean, default=True)
-    counter_id = Column(Integer, ForeignKey("counters.id"), nullable=True)
+    counter_id = Column(Integer, nullable=True)
     tenxa_id = Column(Integer, ForeignKey("tenxa.id"), nullable=False)
 
     #counter = relationship("Counter", back_populates="users")
@@ -144,6 +160,8 @@ class Tenxa(Base):
     name = Column(String, nullable=False)
     slug = Column(String, unique=True, index=True, nullable=False)
     auto_call = Column(Boolean, default=False)
+    feedback_timeout = Column(Integer, default=15)
+    qr_rating = Column(Boolean, default=True, nullable=False)
     
 from sqlalchemy import Column, Integer, LargeBinary, DateTime
 from sqlalchemy.sql import func
@@ -168,3 +186,11 @@ class Footer(Base):
     header = Column(String, nullable=True)
 
     tenxa = relationship("Tenxa")  # nếu bạn có bảng `tenxa`
+    
+class TvGroup(Base):
+    __tablename__ = "tv_groups"
+
+    id = Column(Integer, primary_key=True, index=True)
+    name = Column(String(100), nullable=False)
+    tenxa_id = Column(Integer, nullable=False)
+    counter_ids = Column(ARRAY(Integer), nullable=False, default=[])

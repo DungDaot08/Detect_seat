@@ -357,3 +357,92 @@ def export_ticket_report(
 
     filename = f"ticket_report_{tenxa}_{start}_{end}.xlsx"
     return StreamingResponse(output, media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", headers={"Content-Disposition": f"attachment; filename={filename}"})
+
+class RatingPerCounter(BaseModel):
+    counter_id: int
+    satisfied: int
+    neutral: int
+    need_improvement: int
+
+@router.get("/rating-per-counter", response_model=List[RatingPerCounter])
+def rating_per_counter(
+    start_date: Optional[date] = Query(None),
+    end_date: Optional[date] = Query(None),
+    tenxa: str = Query(...),
+    db: Session = Depends(get_db),
+):
+    tenxa_id = crud.get_tenxa_id_from_slug(db, tenxa)
+    start, end = get_date_range(start_date, end_date)
+
+    result = (
+        db.query(
+            Ticket.counter_id,
+            Ticket.rating,
+            func.count().label("count")
+        )
+        .filter(
+            Ticket.tenxa_id == tenxa_id,
+            Ticket.rating.isnot(None),
+            func.date(Ticket.created_at).between(start, end)
+        )
+        .group_by(Ticket.counter_id, Ticket.rating)
+        .all()
+    )
+
+    # Gom theo counter
+    data = defaultdict(lambda: {"satisfied": 0, "neutral": 0, "needs_improvement": 0})
+    for counter_id, rating, count in result:
+        data[counter_id][rating] = count
+
+    return [
+        RatingPerCounter(
+            counter_id=cid,
+            satisfied=vals["satisfied"],
+            neutral=vals["neutral"],
+            need_improvement=vals["needs_improvement"]
+        )
+        for cid, vals in data.items()
+    ]
+
+class FeedbackItem(BaseModel):
+    ticket_number: int
+    counter_id: int
+    rating: str
+    feedback: Optional[str] = None
+    created_at: datetime
+
+@router.get("/feedbacks", response_model=List[FeedbackItem])
+def list_feedbacks(
+    rating: Optional[str] = Query(None, regex="^(satisfied|neutral|needs_improvement)$"),
+    counter_id: Optional[int] = Query(None),
+    start_date: Optional[date] = Query(None),
+    end_date: Optional[date] = Query(None),
+    tenxa: str = Query(...),
+    db: Session = Depends(get_db)
+):
+    tenxa_id = crud.get_tenxa_id_from_slug(db, tenxa)
+    start, end = get_date_range(start_date, end_date)
+
+    q = db.query(Ticket).filter(
+        Ticket.tenxa_id == tenxa_id,
+        #Ticket.feedback.isnot(None),
+        func.date(Ticket.created_at).between(start, end)
+    )
+    if rating:
+        q = q.filter(Ticket.rating == rating)
+    if counter_id:
+        q = q.filter(Ticket.counter_id == counter_id)
+
+    tickets = q.order_by(Ticket.created_at.desc()).all()
+
+    return [
+        FeedbackItem(
+            ticket_number=t.number,
+            counter_id=t.counter_id,
+            rating=t.rating,
+            feedback=t.feedback,
+            created_at=t.created_at
+        )
+        for t in tickets
+    ]
+

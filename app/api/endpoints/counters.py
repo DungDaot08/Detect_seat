@@ -6,6 +6,7 @@ from app.schemas import CounterPauseCreate, CounterPauseLog
 from app.auth import get_db, get_current_user, check_counter_permission
 from typing import Optional, List
 from app.api.endpoints.realtime import notify_frontend
+from app import models, schemas, auth
 from app.utils.auto_call_loop import reset_events
 from datetime import datetime
 from sqlalchemy import func
@@ -187,7 +188,20 @@ def upsert_counter(
             code=max_code + 1
         )
         db.add(counter)
-
+        db.commit()
+        db.refresh(counter)
+        hashed_password = auth.hash_password(data.password)   
+        db_user = models.User(
+            username="quay" + str(new_id) + "." + data.postfix, 
+            hashed_password=hashed_password,
+            full_name="quay" + str(new_id) + data.postfix, 
+            role="officer",
+            tenxa_id=tenxa_id,
+            counter_id= new_id)
+        db.add(db_user)
+        db.commit()
+        db.refresh(db_user)
+    db.add(counter)
     db.commit()
     db.refresh(counter)
     background_tasks.add_task(

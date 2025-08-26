@@ -33,6 +33,7 @@ class Ticket(BaseModel):
     id: int
     number: int
     counter_id: int
+    counter_name: Optional[str] = None
     created_at: datetime
     status: str
     called_at: Optional[datetime] = None
@@ -97,6 +98,15 @@ class CounterPauseLog(BaseModel):
 class CounterUpsertRequest(BaseModel):
     counter_id: Optional[int] = None
     name: str
+    postfix: str   # chuyển vào body
+    password: str 
+
+    class Config:
+        orm_mode = True
+        
+class CounterUpsertRequestTTS(BaseModel):
+    counter_id: Optional[int] = None
+    name: str
 
     class Config:
         orm_mode = True
@@ -140,3 +150,48 @@ class FooterCreate(FooterBase):
 
 class FooterResponse(FooterBase):
     tenxa: str
+    
+class TicketFeedbackInfo(BaseModel):
+    ticket_number: int
+    counter_name: str
+    status: str
+    finished_at: Optional[datetime] = None
+    can_rate: bool
+    rating: Optional[str] = None   # "satisfied" | "neutral" | "needs_improvement"
+    feedback: Optional[str] = None
+
+    class Config:
+        orm_mode = True
+        
+class TicketRatingUpdate(BaseModel):
+    rating: str   # "satisfied" | "neutral" | "needs_improvement"
+    feedback: Optional[str] = None
+    
+class TvGroupBase(BaseModel):
+    name: str
+    counter_ids: List[int] = []
+
+class TvGroupCreate(TvGroupBase):
+    pass
+
+class TvGroupUpdate(TvGroupBase):
+    pass
+
+class TvGroupResponse(TvGroupBase):
+    id: int
+    tenxa_id: int
+    counters: List[Counter] = []
+
+    class Config:
+        orm_mode = True
+        
+class TenXaConfigUpdate(BaseModel):
+    feedback_timeout: int
+    qr_rating: bool
+
+class TenXaConfigResponse(BaseModel):
+    feedback_timeout: int
+    qr_rating: bool
+
+    class Config:
+        orm_mode = True
