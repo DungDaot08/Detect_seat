@@ -476,14 +476,15 @@ def authenticate_user(db: Session, tenxa_id: int, username: str, password: str):
 def get_footer_by_tenxa(db: Session, tenxa_id: int):
     return db.query(models.Footer).filter(models.Footer.tenxa_id == tenxa_id).first()
 
-def upsert_footer(db: Session, tenxa_id: int, work_time: str, hotline: str, header: str):
+def upsert_footer(db: Session, tenxa_id: int, work_time: str, hotline: str, header: str, allowed_time_ranges: Optional[list] = None):
     footer = db.query(models.Footer).filter(models.Footer.tenxa_id == tenxa_id).first()
     if footer:
         footer.work_time = work_time
         footer.hotline = hotline
         footer.header = header
+        footer.allowed_time_ranges = allowed_time_ranges
     else:
-        footer = models.Footer(tenxa_id=tenxa_id, work_time=work_time, hotline=hotline, header=header)
+        footer = models.Footer(tenxa_id=tenxa_id, work_time=work_time, hotline=hotline, header=header, allowed_time_ranges=allowed_time_ranges)
         db.add(footer)
     db.commit()
     db.refresh(footer)

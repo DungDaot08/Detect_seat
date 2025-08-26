@@ -140,10 +140,15 @@ class Token(BaseModel):
     access_token: str
     token_type: str
     
+class TimeRange(BaseModel):
+    start: str  # "HH:MM"
+    end: str    # "HH:MM"
+    
 class FooterBase(BaseModel):
     work_time: str
     hotline: str
     header: str
+    allowed_time_ranges: Optional[List[TimeRange]] = None
 
 class FooterCreate(FooterBase):
     pass

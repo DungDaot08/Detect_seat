@@ -20,6 +20,18 @@ def get_db():
     finally:
         db.close() 
 
+def is_within_allowed_ranges(ranges: list) -> bool:
+    if not ranges:
+        return True  # không cấu hình thì mặc định luôn cho phép
+    
+    now = datetime.now(vn_tz).time()
+    for r in ranges:
+        start = datetime.strptime(r["start"], "%H:%M").time()
+        end = datetime.strptime(r["end"], "%H:%M").time()
+        if start <= now <= end:
+            return True
+    return False
+
 @router.post("/", response_model=dict)
 def create_ticket(
     ticket: schemas.TicketCreate,
@@ -28,6 +40,10 @@ def create_ticket(
     db: Session = Depends(get_db)
 ):
     tenxa_id = crud.get_tenxa_id_from_slug(db, tenxa)
+    footer = crud.get_footer_by_tenxa(db, tenxa_id)
+
+    if footer and not is_within_allowed_ranges(footer.allowed_time_ranges or []):
+        raise HTTPException(status_code=403, detail="Ngoài giờ làm việc, không thể tạo vé")
     if not redis_client.acquire_ticket_lock(tenxa_id, ticket.counter_id):
         raise HTTPException(status_code=429, detail="Bạn vừa lấy vé, vui lòng chờ vài giây")
 

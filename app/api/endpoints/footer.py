@@ -28,7 +28,8 @@ def get_config(tenxa: str = Query(...), db: Session = Depends(get_db)):
         tenxa=tenxa,
         work_time=footer.work_time,
         hotline=footer.hotline,
-        header= footer.header
+        header= footer.header,
+        allowed_time_ranges= footer.allowed_time_ranges
     )
 
 @router.post("/", response_model=schemas.FooterResponse)
@@ -37,7 +38,7 @@ def update_config(data: schemas.FooterCreate, background_tasks: BackgroundTasks,
     if not tenxa_id:
         raise HTTPException(status_code=404, detail="Không tìm thấy xã")
 
-    footer = crud.upsert_footer(db, tenxa_id, data.work_time, data.hotline, data.header)
+    footer = crud.upsert_footer(db, tenxa_id, data.work_time, data.hotline, data.header, data.allowed_time_ranges)
     
     background_tasks.add_task(
         notify_frontend,
@@ -51,7 +52,8 @@ def update_config(data: schemas.FooterCreate, background_tasks: BackgroundTasks,
         tenxa=tenxa,
         work_time=footer.work_time,
         hotline=footer.hotline,
-        header= footer.header
+        header= footer.header,
+        allowed_time_ranges= footer.allowed_time_ranges
     )
 
 @router.put("/qr_rating", response_model=schemas.TenXaConfigResponse)

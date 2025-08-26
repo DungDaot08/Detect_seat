@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, ForeignKey, UniqueConstraint, DateTime, func, Boolean, Text, Enum, ForeignKeyConstraint
+from sqlalchemy import Column, Integer, String, ForeignKey, UniqueConstraint, DateTime, func, Boolean, Text, Enum, ForeignKeyConstraint, JSON
 from sqlalchemy.orm import relationship
 from app.database import Base
 from sqlalchemy.dialects.postgresql import ARRAY
@@ -184,6 +184,7 @@ class Footer(Base):
     work_time = Column(String, nullable=True)
     hotline = Column(String, nullable=True)
     header = Column(String, nullable=True)
+    allowed_time_ranges = Column(JSON, nullable=True) 
 
     tenxa = relationship("Tenxa")  # nếu bạn có bảng `tenxa`
     
