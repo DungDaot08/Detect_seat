@@ -41,14 +41,14 @@ class Ticket(Base):
     rating = Column(Enum("satisfied", "neutral", "needs_improvement", name="rating_enum"), nullable=True, default="satisfied")
     feedback = Column(Text, nullable=True)
     rated_at = Column(DateTime, nullable=True)
-    tenxa_id = Column(Integer, nullable=False)
+    tenxa_id = Column(Integer, ForeignKey("tenxa.id"), nullable=False)
     
-    __table_args__ = (
-        ForeignKeyConstraint(
-            ["counter_id", "tenxa_id"],
-            ["counters.id", "counters.tenxa_id"]
-        ),
-    )
+    #__table_args__ = (
+    #    ForeignKeyConstraint(
+    #        ["counter_id", "tenxa_id"],
+    #        ["counters.id", "counters.tenxa_id"]
+    #    ),
+    #)
     
 
     #counter = relationship("Counter", back_populates="tickets")
@@ -63,9 +63,9 @@ class Counter(Base):
     status = Column(String(20), nullable=False, default="active")
     tenxa_id = Column(Integer, ForeignKey("tenxa.id"), nullable=False)
     
-    __table_args__ = (
-        UniqueConstraint("id", "tenxa_id", name="uq_counter_id_per_tenxa"),
-    )
+    #__table_args__ = (
+    #    UniqueConstraint("id", "tenxa_id", name="uq_counter_id_per_tenxa"),
+    #)
 
     #counter_fields = relationship("CounterField", back_populates="counter")
     #seats = relationship("Seat", back_populates="counter")
