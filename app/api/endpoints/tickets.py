@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, Query, BackgroundTasks, HTTPException
 from sqlalchemy.orm import Session
-from app import crud, schemas, database
+from app import crud, schemas, database, redis_client
 from typing import List, Optional
 from app.api.endpoints.realtime import notify_frontend
 from datetime import datetime, timedelta
@@ -28,6 +28,8 @@ def create_ticket(
     db: Session = Depends(get_db)
 ):
     tenxa_id = crud.get_tenxa_id_from_slug(db, tenxa)
+    if not redis_client.acquire_ticket_lock(tenxa_id, ticket.counter_id):
+        raise HTTPException(status_code=429, detail="Bạn vừa lấy vé, vui lòng chờ vài giây")
 
     new_ticket = crud.create_ticket(db, tenxa_id, ticket)
     counter_name = crud.get_counter_name_from_counter_id(db, new_ticket.counter_id, tenxa_id)

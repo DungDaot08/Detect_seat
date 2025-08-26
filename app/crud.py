@@ -7,35 +7,12 @@ from sqlalchemy import extract
 from app.models import Procedure, Counter, CounterField, Ticket, Tenxa
 from app import models, schemas, auth
 from passlib.context import CryptContext
+from redis_client import acquire_ticket_lock
 from fastapi import HTTPException
 from pytz import timezone
 
 pwd_context = CryptContext(schemes=["pbkdf2_sha256"], deprecated="auto")
 vn_tz = timezone("Asia/Ho_Chi_Minh")
-
-import os
-import redis
-from urllib.parse import urlparse
-
-redis_url = os.getenv("REDIS_URL")
-url = urlparse(redis_url)
-
-r = redis.Redis(
-    host=url.hostname,
-    port=url.port,
-    password=url.password,
-    ssl=url.scheme == "rediss",
-    decode_responses=True
-)
-
-def acquire_ticket_lock(tenxa_id: int, counter_id: int, cooldown: int = 2) -> bool:
-    """
-    Trả về True nếu lock thành công (nghĩa là cho phép tạo vé).
-    Trả về False nếu request bị lặp trong cooldown giây.
-    """
-    key = f"ticket_lock:{tenxa_id}:{counter_id}"
-    was_set = r.set(key, "1", ex=cooldown, nx=True)  # nx=True: chỉ set nếu chưa tồn tại
-    return was_set is not None
 
 
 def get_feedback_timeout(db: Session, tenxa_id: int) -> int:
@@ -126,9 +103,6 @@ from pytz import timezone
 
 def create_ticket(db: Session, tenxa_id: int, ticket: schemas.TicketCreate) -> models.Ticket:
     now = datetime.now(timezone("Asia/Ho_Chi_Minh"))
-    
-    if not acquire_ticket_lock(tenxa_id, ticket.counter_id):
-        raise HTTPException(status_code=429, detail="Bạn vừa lấy vé, vui lòng chờ vài giây")
 
     if tenxa_id == 300:
         # Reset vé lúc 17:30 hôm nay
