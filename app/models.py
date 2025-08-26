@@ -33,7 +33,7 @@ class Ticket(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     number = Column(Integer, nullable=False)
-    counter_id = Column(Integer, nullable=True)
+    counter_id = Column(Integer, nullable=False)
     created_at = Column(DateTime, default=func.now())
     status = Column(String(20), default="waiting")
     called_at = Column(DateTime, nullable=True, default=None)
@@ -41,7 +41,7 @@ class Ticket(Base):
     rating = Column(Enum("satisfied", "neutral", "needs_improvement", name="rating_enum"), nullable=True, default="satisfied")
     feedback = Column(Text, nullable=True)
     rated_at = Column(DateTime, nullable=True)
-    tenxa_id = Column(Integer, ForeignKey("tenxa.id"), nullable=False)
+    tenxa_id = Column(Integer, nullable=False)
     
     #__table_args__ = (
     #    ForeignKeyConstraint(
@@ -78,7 +78,7 @@ class CounterField(Base):
     __tablename__ = "counter_field"
 
     id = Column(Integer, primary_key=True, index=True)
-    counter_id = Column(Integer, ForeignKey("counters.id"))
+    counter_id = Column(Integer)
     field_id = Column(Integer, ForeignKey("fields.id"))
     tenxa_id = Column(Integer, ForeignKey("tenxa.id"), nullable=False)
 
@@ -109,7 +109,7 @@ class Seat(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     name = Column(String(100), nullable=False)
-    counter_id = Column(Integer, ForeignKey("counters.id"), nullable=False)
+    counter_id = Column(Integer, nullable=False)
     type = Column(PgEnum(SeatType), nullable=False, default="client")
     status = Column(Boolean, default=False)  # True = Có người, False = Trống
     last_empty_time = Column(DateTime, nullable=True)
@@ -123,7 +123,7 @@ class CounterPauseLog(Base):
     __tablename__ = "counter_pause_logs"
 
     id = Column(Integer, primary_key=True, index=True)
-    counter_id = Column(Integer, ForeignKey("counters.id"), nullable=False)
+    counter_id = Column(Integer, nullable=False)
     reason = Column(Text, nullable=False)
     created_at = Column(DateTime, server_default=func.now())
     start_time = Column(DateTime, nullable=True, default=func.now())  # 🆕 thời gian bắt đầu pause
@@ -147,7 +147,7 @@ class User(Base):
     full_name = Column(String(100))
     role = Column(Enum(Role), nullable=False)
     is_active = Column(Boolean, default=True)
-    counter_id = Column(Integer, ForeignKey("counters.id"), nullable=True)
+    counter_id = Column(Integer, nullable=True)
     tenxa_id = Column(Integer, ForeignKey("tenxa.id"), nullable=False)
 
     #counter = relationship("Counter", back_populates="users")
