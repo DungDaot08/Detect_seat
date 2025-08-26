@@ -7,7 +7,7 @@ from sqlalchemy import extract
 from app.models import Procedure, Counter, CounterField, Ticket, Tenxa
 from app import models, schemas, auth
 from passlib.context import CryptContext
-from redis_client import acquire_ticket_lock
+#from redis_client import acquire_ticket_lock
 from fastapi import HTTPException
 from pytz import timezone
 
