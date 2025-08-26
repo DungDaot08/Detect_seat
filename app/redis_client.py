@@ -2,8 +2,8 @@ import os
 import redis
 from urllib.parse import urlparse
 
-redis_url = os.getenv("REDIS_URL")
-url = urlparse(redis_url)
+#redis_url = os.getenv("REDIS_URL")
+url = urlparse("rediss://default:AS_iAAIncDExNDAzNDlhZjk5ZGE0MzI0OGY4NTI1MTcxOTM2NGJmM3AxMTIyNTg@loyal-gnat-12258.upstash.io:6379")
 
 r = redis.Redis(
     host=url.hostname,
