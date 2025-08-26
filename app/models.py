@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, ForeignKey, UniqueConstraint, DateTime, func, Boolean, Text, Enum
+from sqlalchemy import Column, Integer, String, ForeignKey, UniqueConstraint, DateTime, func, Boolean, Text, Enum, ForeignKeyConstraint
 from sqlalchemy.orm import relationship
 from app.database import Base
 from sqlalchemy.dialects.postgresql import ARRAY
@@ -33,7 +33,7 @@ class Ticket(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     number = Column(Integer, nullable=False)
-    counter_id = Column(Integer, ForeignKey("counters.id"), nullable=False)
+    counter_id = Column(Integer, nullable=False)
     created_at = Column(DateTime, default=func.now())
     status = Column(String(20), default="waiting")
     called_at = Column(DateTime, nullable=True, default=None)
@@ -42,6 +42,13 @@ class Ticket(Base):
     feedback = Column(Text, nullable=True)
     rated_at = Column(DateTime, nullable=True)
     tenxa_id = Column(Integer, ForeignKey("tenxa.id"), nullable=False)
+    
+    __table_args__ = (
+        ForeignKeyConstraint(
+            ["counter_id", "tenxa_id"],
+            ["counters.id", "counters.tenxa_id"]
+        ),
+    )
     
 
     #counter = relationship("Counter", back_populates="tickets")
