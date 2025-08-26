@@ -41,7 +41,7 @@ class Ticket(Base):
     rating = Column(Enum("satisfied", "neutral", "needs_improvement", name="rating_enum"), nullable=True, default="satisfied")
     feedback = Column(Text, nullable=True)
     rated_at = Column(DateTime, nullable=True)
-    tenxa_id = Column(Integer, nullable=False)
+    tenxa_id = Column(Integer, ForeignKey("tenxa.id"), nullable=False)
     
     #__table_args__ = (
     #    ForeignKeyConstraint(
