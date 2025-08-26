@@ -131,7 +131,7 @@ def create_ticket(db: Session, tenxa_id: int, ticket: schemas.TicketCreate) -> m
     )
 
     next_number = 1 if not latest else latest.number + 1
-    counter_name = get_counter_name_from_counter_id(db, ticket.counter_id, tenxa_id)
+    #counter_name = get_counter_name_from_counter_id(db, ticket.counter_id, tenxa_id)
 
     db_ticket = models.Ticket(
         number=next_number,
