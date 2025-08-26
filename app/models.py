@@ -62,6 +62,10 @@ class Counter(Base):
     #timeout_seconds = Column(Integer, default=60)
     status = Column(String(20), nullable=False, default="active")
     tenxa_id = Column(Integer, ForeignKey("tenxa.id"), nullable=False)
+    
+    __table_args__ = (
+        UniqueConstraint("id", "tenxa_id", name="uq_counter_id_per_tenxa"),
+    )
 
     #counter_fields = relationship("CounterField", back_populates="counter")
     #seats = relationship("Seat", back_populates="counter")
