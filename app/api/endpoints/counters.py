@@ -297,7 +297,7 @@ def upsert_counter(
     tenxa_id = crud.get_tenxa_id_from_slug(db, tenxa)
 
     # Lấy record tenxa để dùng postfix và password
-    tenxa_record = db.query(models.TenXa).filter(models.TenXa.id == tenxa_id).first()
+    tenxa_record = db.query(models.Tenxa).filter(models.Tenxa.id == tenxa_id).first()
     if not tenxa_record:
         raise HTTPException(status_code=404, detail="Tenxa not found")
 
