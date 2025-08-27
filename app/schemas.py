@@ -143,9 +143,9 @@ class TimeRange(BaseModel):
     end: str    # "HH:MM"
     
 class FooterBase(BaseModel):
-    work_time: str
-    hotline: str
-    header: str
+    work_time: Optional[str] = None
+    hotline: Optional[str] = None
+    header: Optional[str] = None
     allowed_time_ranges: Optional[List[TimeRange]] = None
 
 class FooterCreate(FooterBase):

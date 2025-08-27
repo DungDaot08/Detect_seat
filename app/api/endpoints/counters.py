@@ -329,12 +329,12 @@ def upsert_counter(
         hashed_password = auth.hash_password(tenxa_record.password)
 
         db_user = models.User(
-            username="quay" + str(new_id) + "." + tenxa_record.postfix,
+            username="quay" + str(data.counter_id) + "." + tenxa_record.postfix,
             hashed_password=hashed_password,
-            full_name="quay" + str(new_id) + tenxa_record.postfix,
+            full_name="quay" + str(data.counter_id) + tenxa_record.postfix,
             role="officer",
             tenxa_id=tenxa_id,
-            counter_id=new_id
+            counter_id=data.counter_id
         )
         db.add(db_user)
         db.commit()
