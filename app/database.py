@@ -10,8 +10,8 @@ SQLALCHEMY_DATABASE_URL = "postgresql://detect_seat_user:ixRpspwrkGkn4ylMjo222PI
 #engine = create_engine(SQLALCHEMY_DATABASE_URL)
 engine = create_engine(
     SQLALCHEMY_DATABASE_URL,
-    pool_size=30,        # giữ thường trực 20 connections
-    max_overflow=30,     # có thể mở thêm tối đa 20 khi quá tải
+    pool_size=40,        # giữ thường trực 20 connections
+    max_overflow=40,     # có thể mở thêm tối đa 20 khi quá tải
     pool_timeout=30,     # chờ 30s nếu pool full
     pool_recycle=1800,   # reset sau 30 phút
     pool_pre_ping=True   # kiểm tra connection sống
