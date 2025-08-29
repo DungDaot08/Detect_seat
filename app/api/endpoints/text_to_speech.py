@@ -201,7 +201,7 @@ def generate_tts(
         raise HTTPException(status_code=404, detail="Counter not found")
 
     # Đường dẫn 2 file local
-    if(tenxa_id == 5):
+    if tenxa_id in (5, 11):
         prefix = PREFIX_PATH_TAP
     else:
         prefix = PREFIX_PATH
