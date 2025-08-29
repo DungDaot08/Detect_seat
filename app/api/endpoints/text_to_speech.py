@@ -201,10 +201,10 @@ def generate_tts(
         raise HTTPException(status_code=404, detail="Counter not found")
 
     # Đường dẫn 2 file local
-    if tenxa_id in (5, 11):
-        prefix = PREFIX_PATH_TAP
-    else:
+    if tenxa_id in (0):
         prefix = PREFIX_PATH
+    else:
+        prefix = PREFIX_PATH_TAP
 
     number = os.path.join(NUMBERS_PATH, f"{request.ticket_number}.mp3")
 
