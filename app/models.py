@@ -137,7 +137,7 @@ class Role(str, enum.Enum):
     admin = "admin"
     leader = "leader"
     officer = "officer"
-    kisok = "kiosk"
+    kiosk = "kiosk"
     tv = "tv"
 
 class User(Base):
