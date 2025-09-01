@@ -113,6 +113,8 @@ class Role(str, Enum):
     admin = "admin"
     leader = "leader"
     officer = "officer"
+    kisok = "kiosk"
+    tv = "tv"
 
 class UserBase(BaseModel):
     username: str
