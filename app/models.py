@@ -137,6 +137,8 @@ class Role(str, enum.Enum):
     admin = "admin"
     leader = "leader"
     officer = "officer"
+    kisok = "kiosk"
+    tv = "tv"
 
 class User(Base):
     __tablename__ = "users"
