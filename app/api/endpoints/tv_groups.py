@@ -80,9 +80,9 @@ def create_tv_group(group: schemas.TvGroupCreate, background_tasks: BackgroundTa
 
 # Cập nhật group
 @router.put("/updates", response_model=schemas.TvGroupResponse)
-def update_tv_group(group_name: str, group: schemas.TvGroupUpdate, background_tasks: BackgroundTasks, tenxa: str = Query(...), db: Session = Depends(get_db)):
+def update_tv_group(group_id: int, group: schemas.TvGroupUpdate, background_tasks: BackgroundTasks, tenxa: str = Query(...), db: Session = Depends(get_db)):
     tenxa_id = crud.get_tenxa_id_from_slug(db, tenxa)
-    db_group = db.query(models.TvGroup).filter(models.TvGroup.name == group_name).filter(models.TvGroup.tenxa_id == tenxa_id).first()
+    db_group = db.query(models.TvGroup).filter(models.TvGroup.id == group_id).filter(models.TvGroup.tenxa_id == tenxa_id).first()
     if not db_group:
         raise HTTPException(status_code=404, detail="Group not found")
 
@@ -114,9 +114,9 @@ def update_tv_group(group_name: str, group: schemas.TvGroupUpdate, background_ta
 
 # Xóa group
 @router.delete("/")
-def delete_tv_group(group_name: str, background_tasks: BackgroundTasks, tenxa: str = Query(...), db: Session = Depends(get_db)):
+def delete_tv_group(group_id: int, background_tasks: BackgroundTasks, tenxa: str = Query(...), db: Session = Depends(get_db)):
     tenxa_id = crud.get_tenxa_id_from_slug(db, tenxa)
-    db_group = db.query(models.TvGroup).filter(models.TvGroup.name == group_name).filter(models.TvGroup.tenxa_id == tenxa_id).first()
+    db_group = db.query(models.TvGroup).filter(models.TvGroup.id == group_id).filter(models.TvGroup.tenxa_id == tenxa_id).first()
     if not db_group:
         raise HTTPException(status_code=404, detail="Group not found")
 
