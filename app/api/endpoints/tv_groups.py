@@ -135,10 +135,10 @@ def delete_tv_group(group_id: int, background_tasks: BackgroundTasks, tenxa: str
 
 # Lấy danh sách quầy theo group
 @router.get("/counters", response_model=List[schemas.Counter])
-def get_counters_by_group(group_name: str, tenxa: str = Query(...), db: Session = Depends(get_db)):
+def get_counters_by_group(group_id: int, tenxa: str = Query(...), db: Session = Depends(get_db)):
     tenxa_id = crud.get_tenxa_id_from_slug(db, tenxa)
     db_group = db.query(models.TvGroup).filter(
-        models.TvGroup.name == group_name, models.TvGroup.tenxa_id == tenxa_id
+        models.TvGroup.id == group_id, models.TvGroup.tenxa_id == tenxa_id
     ).first()
     if not db_group:
         raise HTTPException(status_code=404, detail="Group not found")
