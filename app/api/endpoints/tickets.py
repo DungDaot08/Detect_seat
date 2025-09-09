@@ -204,3 +204,45 @@ def get_ticket_feedback_info_new(
         "feedback": ticket.feedback
     }
 
+@router.put("/transfer", response_model=schemas.Ticket)
+def transfer_ticket(
+    background_tasks: BackgroundTasks, 
+    ticket_number: int = Query(..., description="Số vé cần chuyển"),
+    target_counter_id: int = Query(..., description="Quầy đích cần chuyển tới"), 
+    tenxa: str = Query(...),
+    db: Session = Depends(get_db)
+):
+    tenxa_id = crud.get_tenxa_id_from_slug(db, tenxa)
+
+    # Lấy vé
+    ticket = crud.get_ticket(db, tenxa_id, ticket_number)
+    if not ticket:
+        raise HTTPException(status_code=404, detail="Không tìm thấy vé")
+
+    if ticket.status != "waiting":
+        raise HTTPException(status_code=400, detail="Chỉ có thể chuyển vé đang chờ (waiting)")
+
+    # Kiểm tra quầy đích có vé waiting hoặc called không
+    waiting = crud.get_waiting_tickets(db, tenxa_id, target_counter_id)
+    called = crud.get_called_tickets(db, tenxa_id, target_counter_id)
+    if waiting or called:
+        raise HTTPException(status_code=400, detail="Quầy đích đang bận, không thể chuyển vé")
+    
+    counter_name = crud.get_counter_name_from_counter_id(db, target_counter_id, tenxa_id)
+    
+    background_tasks.add_task(
+        notify_frontend, {
+            "event": "new_ticket",
+            "ticket_number": ticket_number,
+            "counter_name": counter_name,
+            "counter_id": target_counter_id,
+            "tenxa": tenxa
+        }
+    )
+
+    # Cập nhật counter_id
+    ticket.counter_id = target_counter_id
+    db.commit()
+    db.refresh(ticket)
+
+    return ticket
