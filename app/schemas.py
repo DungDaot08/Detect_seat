@@ -175,6 +175,7 @@ class TicketRatingUpdate(BaseModel):
 class TvGroupBase(BaseModel):
     name: str
     counter_ids: List[int] = []
+    tts_enable: bool
 
 class TvGroupCreate(TvGroupBase):
     pass

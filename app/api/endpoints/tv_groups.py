@@ -53,7 +53,8 @@ def create_tv_group(group: schemas.TvGroupCreate, background_tasks: BackgroundTa
     db_group = models.TvGroup(
         name=group.name,
         tenxa_id=tenxa_id,
-        counter_ids=group.counter_ids
+        counter_ids=group.counter_ids,
+        tts_enable=group.tts_enable
     )
     db.add(db_group)
     db.commit()
@@ -64,6 +65,7 @@ def create_tv_group(group: schemas.TvGroupCreate, background_tasks: BackgroundTa
             "event": "new_tv_group",
             "group_name": group.name,
             "counter_ids": group.counter_ids,
+            "tts_enable": group.tts_enable,
             "tenxa" : tenxa
         }
     )
@@ -74,6 +76,7 @@ def create_tv_group(group: schemas.TvGroupCreate, background_tasks: BackgroundTa
         name=db_group.name,
         tenxa_id=db_group.tenxa_id,
         counter_ids=db_group.counter_ids,
+        tts_enable=db_group.tts_enable,
         counters=counters
     )
 
@@ -89,6 +92,7 @@ def update_tv_group(group_id: int, group: schemas.TvGroupUpdate, background_task
     db_group.name = group.name
     db_group.tenxa_id = tenxa_id
     db_group.counter_ids = group.counter_ids
+    db_group.tts_enable = group.tts_enable
 
     db.commit()
     db.refresh(db_group)
@@ -98,6 +102,7 @@ def update_tv_group(group_id: int, group: schemas.TvGroupUpdate, background_task
             "event": "update_tv_group",
             "group_name": group.name,
             "counter_ids": group.counter_ids,
+            "tts_enable": group.tts_enable,
             "tenxa" : tenxa
         }
     )
@@ -108,6 +113,7 @@ def update_tv_group(group_id: int, group: schemas.TvGroupUpdate, background_task
         name=db_group.name,
         tenxa_id=db_group.tenxa_id,
         counter_ids=db_group.counter_ids,
+        tts_enable=db_group.tts_enable,
         counters=counters
     )
 

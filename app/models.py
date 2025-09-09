@@ -199,3 +199,4 @@ class TvGroup(Base):
     name = Column(String(100), nullable=False)
     tenxa_id = Column(Integer, nullable=False)
     counter_ids = Column(ARRAY(Integer), nullable=False, default=[])
+    tts_enable = Column(Boolean, default=True)
