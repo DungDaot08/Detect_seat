@@ -28,6 +28,7 @@ def get_tv_groups_by_tenxa(tenxa: str = Query(...), db: Session = Depends(get_db
                 name=g.name,
                 tenxa_id=g.tenxa_id,
                 counter_ids=g.counter_ids,
+                tts_enable=g.tts_enable,
                 counters=counters
             )
         )
