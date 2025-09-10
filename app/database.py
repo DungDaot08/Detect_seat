@@ -19,4 +19,10 @@ engine = create_engine(
 )
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
+SQLALCHEMY_STATS_URL = "postgresql://lstd:DMYteWaJh8kAHhGXw6FAwp5lqnKSIs8A@dpg-d2ot633ipnbc73a7ivgg-a.oregon-postgres.render.com/lstd_dz27"
+engine_stats = create_engine(SQLALCHEMY_STATS_URL)
+SessionStats = sessionmaker(autocommit=False, autoflush=False, bind=engine_stats)
+
+
 Base = declarative_base()
+

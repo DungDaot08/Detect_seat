@@ -23,6 +23,14 @@ def get_db():
     finally:
         db.close()
 
+def get_stats_db():
+    db = database.SessionStats()
+    try:
+        yield db
+    finally:
+        db.close()
+
+
 # ==== SCHEMAS ====
 
 class TicketsPerCounter(BaseModel):
@@ -461,7 +469,7 @@ class TenxaStats(BaseModel):
 def stats_by_tenxa(
     start_date: Optional[date] = Query(None),
     end_date: Optional[date] = Query(None),
-    db: Session = Depends(get_db),
+    db: Session = Depends(get_stats_db),
 ):
     start, end = get_date_range(start_date, end_date)
 
