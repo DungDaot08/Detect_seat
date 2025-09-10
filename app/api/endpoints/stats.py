@@ -457,7 +457,7 @@ class TenxaStats(BaseModel):
     neutral: int
     need_improvement: int
 
-@router.get("/stats/by-tenxa", response_model=List[TenxaStats])
+@router.get("/stats-by-tenxa", response_model=List[TenxaStats])
 def stats_by_tenxa(
     start_date: Optional[date] = Query(None),
     end_date: Optional[date] = Query(None),
