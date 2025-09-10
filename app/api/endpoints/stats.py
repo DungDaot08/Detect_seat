@@ -463,9 +463,9 @@ class TenxaStats(BaseModel):
     avg_handling_time_seconds: Optional[float]
     satisfied: int
     neutral: int
-    need_improvement: int
+    needs_improvement: int
 
-@router.get("/stats-by-tenxa", response_model=List[TenxaStats])
+@router.get("/all-unit", response_model=List[TenxaStats])
 def stats_by_tenxa(
     start_date: Optional[date] = Query(None),
     end_date: Optional[date] = Query(None),
@@ -568,7 +568,7 @@ def stats_by_tenxa(
                 avg_handling_time_seconds=handling_map.get(tx_id),
                 satisfied=rating_map[tx_id]["satisfied"],
                 neutral=rating_map[tx_id]["neutral"],
-                need_improvement=rating_map[tx_id]["needs_improvement"],  # ⚠️ sửa đúng key
+                needs_improvement=rating_map[tx_id]["needs_improvement"],  # ⚠️ sửa đúng key
             )
         )
 
