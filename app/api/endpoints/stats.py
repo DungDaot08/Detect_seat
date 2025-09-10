@@ -446,3 +446,126 @@ def list_feedbacks(
         for t in tickets
     ]
 
+class TenxaStats(BaseModel):
+    tenxa_id: int
+    tenxa_name: str
+    total_tickets: int
+    attended_tickets: int
+    avg_waiting_time_seconds: Optional[float]
+    avg_handling_time_seconds: Optional[float]
+    satisfied: int
+    neutral: int
+    need_improvement: int
+
+@router.get("/stats/by-tenxa", response_model=List[TenxaStats])
+def stats_by_tenxa(
+    start_date: Optional[date] = Query(None),
+    end_date: Optional[date] = Query(None),
+    db: Session = Depends(get_db),
+):
+    start, end = get_date_range(start_date, end_date)
+
+    # --- Tổng số vé được in ---
+    total_q = (
+        db.query(
+            Ticket.tenxa_id,
+            func.count().label("total_tickets")
+        )
+        .filter(func.date(Ticket.created_at).between(start, end))
+        .group_by(Ticket.tenxa_id)
+        .all()
+    )
+    total_map = {row.tenxa_id: row.total_tickets for row in total_q}
+
+    # --- Tổng số vé đã tiếp đón ---
+    attended_q = (
+        db.query(
+            Ticket.tenxa_id,
+            func.count().label("attended_tickets")
+        )
+        .filter(
+            Ticket.called_at.isnot(None),
+            Ticket.finished_at.isnot(None),
+            func.date(Ticket.created_at).between(start, end)
+        )
+        .group_by(Ticket.tenxa_id)
+        .all()
+    )
+    attended_map = {row.tenxa_id: row.attended_tickets for row in attended_q}
+
+    # --- Thời gian chờ trung bình ---
+    waiting_q = (
+        db.query(
+            Ticket.tenxa_id,
+            func.avg(func.extract("epoch", Ticket.called_at - Ticket.created_at)).label("avg_waiting_time")
+        )
+        .filter(
+            Ticket.created_at.isnot(None),
+            Ticket.called_at.isnot(None),
+            func.date(Ticket.created_at).between(start, end)
+        )
+        .group_by(Ticket.tenxa_id)
+        .all()
+    )
+    waiting_map = {row.tenxa_id: row.avg_waiting_time for row in waiting_q}
+
+    # --- Thời gian tiếp đón trung bình ---
+    handling_q = (
+        db.query(
+            Ticket.tenxa_id,
+            func.avg(func.extract("epoch", Ticket.finished_at - Ticket.called_at)).label("avg_handling_time")
+        )
+        .filter(
+            Ticket.called_at.isnot(None),
+            Ticket.finished_at.isnot(None),
+            func.date(Ticket.created_at).between(start, end)
+        )
+        .group_by(Ticket.tenxa_id)
+        .all()
+    )
+    handling_map = {row.tenxa_id: row.avg_handling_time for row in handling_q}
+
+    # --- Rating ---
+    rating_q = (
+        db.query(
+            Ticket.tenxa_id,
+            Ticket.rating,
+            func.count().label("count")
+        )
+        .filter(
+            Ticket.rating.isnot(None),
+            func.date(Ticket.created_at).between(start, end)
+        )
+        .group_by(Ticket.tenxa_id, Ticket.rating)
+        .all()
+    )
+
+    rating_map = defaultdict(lambda: {"satisfied": 0, "neutral": 0, "needs_improvement": 0})
+    for tenxa_id, rating, count in rating_q:
+        if rating in rating_map[tenxa_id]:
+            rating_map[tenxa_id][rating] += count
+
+    # --- Lấy danh sách xã ---
+    tenxa_list = db.query(Counter.tenxa_id).distinct().all()
+    tenxa_ids = [row.tenxa_id for row in tenxa_list]
+
+    # Nếu có bảng Tenxa riêng, thay Counter bằng bảng Tenxa, rồi join để lấy tên xã
+    # Ở đây mình giả sử crud có hàm get_tenxa_name(db, id)
+
+    results = []
+    for tx_id in tenxa_ids:
+        results.append(
+            TenxaStats(
+                tenxa_id=tx_id,
+                tenxa_name=crud.get_tenxa_name(db, tx_id),  # hoặc lấy từ bảng Tenxa
+                total_tickets=total_map.get(tx_id, 0),
+                attended_tickets=attended_map.get(tx_id, 0),
+                avg_waiting_time_seconds=waiting_map.get(tx_id),
+                avg_handling_time_seconds=handling_map.get(tx_id),
+                satisfied=rating_map[tx_id]["satisfied"],
+                neutral=rating_map[tx_id]["neutral"],
+                need_improvement=rating_map[tx_id]["needs_improvement"]
+            )
+        )
+
+    return results
