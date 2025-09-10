@@ -3,7 +3,7 @@ from pydantic import BaseModel
 from typing import List, Optional
 from datetime import date, datetime
 from sqlalchemy.orm import Session
-from app.models import Ticket, SeatLog, Seat, Counter  # assuming these are your SQLAlchemy models
+from app.models import Ticket, SeatLog, Seat, Counter, Tenxa  # assuming these are your SQLAlchemy models
 from sqlalchemy import func, and_, or_
 from app import crud, schemas, database
 from collections import defaultdict
@@ -546,25 +546,21 @@ def stats_by_tenxa(
             rating_map[tenxa_id][rating] += count
 
     # --- Lấy danh sách xã ---
-    tenxa_list = db.query(Counter.tenxa_id).distinct().all()
-    tenxa_ids = [row.tenxa_id for row in tenxa_list]
-
-    # Nếu có bảng Tenxa riêng, thay Counter bằng bảng Tenxa, rồi join để lấy tên xã
-    # Ở đây mình giả sử crud có hàm get_tenxa_name(db, id)
+    tenxa_list = db.query(Tenxa.id, Tenxa.name).all()
 
     results = []
-    for tx_id in tenxa_ids:
+    for tx_id, tx_name in tenxa_list:
         results.append(
             TenxaStats(
                 tenxa_id=tx_id,
-                tenxa_name=crud.get_tenxa_name(db, tx_id),  # hoặc lấy từ bảng Tenxa
+                tenxa_name=tx_name,
                 total_tickets=total_map.get(tx_id, 0),
                 attended_tickets=attended_map.get(tx_id, 0),
                 avg_waiting_time_seconds=waiting_map.get(tx_id),
                 avg_handling_time_seconds=handling_map.get(tx_id),
                 satisfied=rating_map[tx_id]["satisfied"],
                 neutral=rating_map[tx_id]["neutral"],
-                need_improvement=rating_map[tx_id]["needs_improvement"]
+                need_improvement=rating_map[tx_id]["needs_improvement"],  # ⚠️ sửa đúng key
             )
         )
 
