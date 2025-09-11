@@ -577,3 +577,63 @@ def stats_by_tenxa(
         )
 
     return results
+
+from fastapi.responses import StreamingResponse
+import io
+import openpyxl
+
+@router.get("/all-unit/excel")
+def export_stats_excel(
+    start_date: Optional[date] = Query(None),
+    end_date: Optional[date] = Query(None),
+    db: Session = Depends(get_stats_db),
+):
+    start, end = get_date_range(start_date, end_date)
+
+    # --- Lấy dữ liệu từ API stats_by_tenxa ---
+    stats = stats_by_tenxa(start_date, end_date, db)
+
+    # --- Tạo workbook ---
+    wb = openpyxl.Workbook()
+    ws = wb.active
+    ws.title = "Thống kê xã"
+
+    # --- Header ---
+    headers = [
+        "Mã xã",
+        "Tên xã",
+        "Tổng vé",
+        "Vé đã tiếp đón",
+        "TG chờ TB (giây)",
+        "TG tiếp đón TB (giây)",
+        "Hài lòng",
+        "Bình thường",
+        "Cần cải thiện",
+    ]
+    ws.append(headers)
+
+    # --- Dữ liệu ---
+    for row in stats:
+        ws.append([
+            row.tenxa_id,
+            row.tenxa_name,
+            row.total_tickets,
+            row.attended_tickets,
+            round(row.avg_waiting_time_seconds, 2) if row.avg_waiting_time_seconds else None,
+            round(row.avg_handling_time_seconds, 2) if row.avg_handling_time_seconds else None,
+            row.satisfied,
+            row.neutral,
+            row.needs_improvement,
+        ])
+
+    # --- Xuất file ---
+    file_stream = io.BytesIO()
+    wb.save(file_stream)
+    file_stream.seek(0)
+
+    filename = f"thong_ke_xa_{start}_{end}.xlsx"
+    return StreamingResponse(
+        file_stream,
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        headers={"Content-Disposition": f"attachment; filename={filename}"}
+    )
