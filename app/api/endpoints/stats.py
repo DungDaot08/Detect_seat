@@ -646,8 +646,8 @@ def export_stats_excel(
         "Tên xã",
         "Tổng vé",
         "Vé đã tiếp đón",
-        "TG chờ TB (phút)",
-        "TG tiếp đón TB (phút)",
+        "Thời gian chờ trung bình (phút)",
+        "Thời gian đón trung bình (phút)",
         "Hài lòng",
         "Bình thường",
         "Cần cải thiện",
@@ -676,8 +676,8 @@ def export_stats_excel(
             row.tenxa_name or "",
             row.total_tickets or 0,
             row.attended_tickets or 0,
-            round(waiting_min, 2),
-            round(handling_min, 2),
+            round(waiting_min, 1),
+            round(handling_min, 1),
             row.satisfied or 0,
             row.neutral or 0,
             row.needs_improvement or 0,
@@ -703,8 +703,8 @@ def export_stats_excel(
 
     ws.cell(row=total_row_idx, column=3, value=sum(r.total_tickets or 0 for r in stats_sorted))
     ws.cell(row=total_row_idx, column=4, value=sum(r.attended_tickets or 0 for r in stats_sorted))
-    ws.cell(row=total_row_idx, column=5, value=round(mean(waiting_times), 2) if waiting_times else 0)
-    ws.cell(row=total_row_idx, column=6, value=round(mean(handling_times), 2) if handling_times else 0)
+    ws.cell(row=total_row_idx, column=5, value=round(mean(waiting_times), 1) if waiting_times else 0)
+    ws.cell(row=total_row_idx, column=6, value=round(mean(handling_times), 1) if handling_times else 0)
     ws.cell(row=total_row_idx, column=7, value=sum(r.satisfied or 0 for r in stats_sorted))
     ws.cell(row=total_row_idx, column=8, value=sum(r.neutral or 0 for r in stats_sorted))
     ws.cell(row=total_row_idx, column=9, value=sum(r.needs_improvement or 0 for r in stats_sorted))
