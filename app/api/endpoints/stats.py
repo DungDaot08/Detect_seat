@@ -624,7 +624,7 @@ def export_stats_excel(
     )
 
     # --- Tiêu đề ---
-    title = f"BÁO CÁO THỐNG KÊ THEO XÃ ({start} → {end})"
+    title = f"BÁO CÁO THỐNG KÊ THEO XÃ ( TỪ {start} ĐẾN {end})"
     ws.merge_cells("A1:I1")
     cell = ws["A1"]
     cell.value = title
@@ -637,8 +637,8 @@ def export_stats_excel(
         "Tên xã",
         "Tổng vé",
         "Vé đã tiếp đón",
-        "TG chờ TB (phút)",         # 👈 đổi thành phút
-        "TG tiếp đón TB (phút)",    # 👈 đổi thành phút
+        "Thời gian chờ trung bình (phút)",         # 👈 đổi thành phút
+        "Thời gian tiếp đón trung bình (phút)",    # 👈 đổi thành phút
         "Hài lòng",
         "Bình thường",
         "Cần cải thiện",
