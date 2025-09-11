@@ -591,7 +591,7 @@ from statistics import mean
 
 from app import database
 from app.models import Ticket, Tenxa
-from .your_stats_file import stats_by_tenxa  # 👈 thay đúng đường dẫn file chứa stats_by_tenxa
+#from .your_stats_file import stats_by_tenxa  # 👈 thay đúng đường dẫn file chứa stats_by_tenxa
 
 
 router = APIRouter()
