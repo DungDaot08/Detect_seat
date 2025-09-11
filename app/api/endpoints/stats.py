@@ -613,7 +613,7 @@ def export_stats_excel(
 
     # --- Style cơ bản ---
     bold_font = Font(bold=True, size=12)
-    center_align = Alignment(horizontal="center", vertical="center")
+    center_wrap = Alignment(horizontal="center", vertical="center", wrap_text=True)
     header_fill = PatternFill("solid", fgColor="BDD7EE")  # xanh nhạt
     total_fill = PatternFill("solid", fgColor="FFD966")   # vàng nhạt
     thin_border = Border(
@@ -624,12 +624,12 @@ def export_stats_excel(
     )
 
     # --- Tiêu đề ---
-    title = f"BÁO CÁO THỐNG KÊ THEO XÃ ( TỪ {start} ĐẾN {end})"
+    title = f"BÁO CÁO THỐNG KÊ THEO XÃ (TỪ {start} ĐẾN {end})"
     ws.merge_cells("A1:I1")
     cell = ws["A1"]
     cell.value = title
     cell.font = Font(bold=True, size=14, color="1F4E78")
-    cell.alignment = center_align
+    cell.alignment = center_wrap
 
     # --- Để trống 1 dòng, header bắt đầu từ dòng 3 ---
     headers = [
@@ -637,8 +637,8 @@ def export_stats_excel(
         "Tên xã",
         "Tổng vé",
         "Vé đã tiếp đón",
-        "Thời gian chờ trung bình (phút)",         # 👈 đổi thành phút
-        "Thời gian tiếp đón trung bình (phút)",    # 👈 đổi thành phút
+        "Thời gian chờ trung bình (phút)",
+        "Thời gian tiếp đón trung bình (phút)",
         "Hài lòng",
         "Bình thường",
         "Cần cải thiện",
@@ -651,7 +651,7 @@ def export_stats_excel(
         cell = ws.cell(row=3, column=col)
         cell.font = bold_font
         cell.fill = header_fill
-        cell.alignment = center_align
+        cell.alignment = center_wrap
         cell.border = thin_border
         ws.column_dimensions[openpyxl.utils.get_column_letter(col)].width = 20
 
@@ -682,7 +682,7 @@ def export_stats_excel(
     # style dữ liệu
     for row in ws.iter_rows(min_row=4, max_row=ws.max_row, min_col=1, max_col=9):
         for cell in row:
-            cell.alignment = center_align
+            cell.alignment = center_wrap
             cell.border = thin_border
 
     # --- Thêm dòng tổng kết ---
@@ -705,7 +705,7 @@ def export_stats_excel(
         cell = ws.cell(row=total_row_idx, column=col)
         cell.font = Font(bold=True)
         cell.fill = total_fill
-        cell.alignment = center_align
+        cell.alignment = center_wrap
         cell.border = thin_border
 
     # --- Xuất file ---
