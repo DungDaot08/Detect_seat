@@ -594,6 +594,9 @@ def export_stats_excel(
     start, end = get_date_range(start_date, end_date)
     stats = stats_by_tenxa(start_date, end_date, db)
 
+    # --- Sort theo mã xã ---
+    stats_sorted = sorted(stats, key=lambda r: r.tenxa_id)
+
     # --- Tạo workbook ---
     wb = openpyxl.Workbook()
     ws = wb.active
@@ -619,7 +622,7 @@ def export_stats_excel(
     cell.font = Font(bold=True, size=14, color="1F4E78")
     cell.alignment = center_align
 
-    # --- Header ---
+    # --- Để trống 1 dòng, header bắt đầu từ dòng 3 ---
     headers = [
         "Mã xã",
         "Tên xã",
@@ -631,11 +634,12 @@ def export_stats_excel(
         "Bình thường",
         "Cần cải thiện",
     ]
+    ws.append([])  # dòng 2 trống
     ws.append(headers)
 
-    # style header
+    # style header (dòng 3)
     for col in range(1, len(headers) + 1):
-        cell = ws.cell(row=2, column=col)
+        cell = ws.cell(row=3, column=col)
         cell.font = bold_font
         cell.fill = header_fill
         cell.alignment = center_align
@@ -645,17 +649,17 @@ def export_stats_excel(
     # --- Dữ liệu ---
     waiting_times = []
     handling_times = []
-    for row in stats:
+    for row in stats_sorted:
         ws.append([
-            row.tenxa_id,
-            row.tenxa_name,
-            row.total_tickets,
-            row.attended_tickets,
-            round(row.avg_waiting_time_seconds, 2) if row.avg_waiting_time_seconds else None,
-            round(row.avg_handling_time_seconds, 2) if row.avg_handling_time_seconds else None,
-            row.satisfied,
-            row.neutral,
-            row.needs_improvement,
+            row.tenxa_id or 0,
+            row.tenxa_name or "",
+            row.total_tickets or 0,
+            row.attended_tickets or 0,
+            round(row.avg_waiting_time_seconds, 2) if row.avg_waiting_time_seconds else 0,
+            round(row.avg_handling_time_seconds, 2) if row.avg_handling_time_seconds else 0,
+            row.satisfied or 0,
+            row.neutral or 0,
+            row.needs_improvement or 0,
         ])
         if row.avg_waiting_time_seconds:
             waiting_times.append(row.avg_waiting_time_seconds)
@@ -663,7 +667,7 @@ def export_stats_excel(
             handling_times.append(row.avg_handling_time_seconds)
 
     # style dữ liệu
-    for row in ws.iter_rows(min_row=3, max_row=ws.max_row, min_col=1, max_col=9):
+    for row in ws.iter_rows(min_row=4, max_row=ws.max_row, min_col=1, max_col=9):
         for cell in row:
             cell.alignment = center_align
             cell.border = thin_border
@@ -675,13 +679,13 @@ def export_stats_excel(
     ws.cell(row=total_row_idx, column=1, value="TỔNG KẾT")
     ws.merge_cells(start_row=total_row_idx, start_column=1, end_row=total_row_idx, end_column=2)
 
-    ws.cell(row=total_row_idx, column=3, value=sum(r.total_tickets for r in stats))
-    ws.cell(row=total_row_idx, column=4, value=sum(r.attended_tickets for r in stats))
-    ws.cell(row=total_row_idx, column=5, value=round(mean(waiting_times), 2) if waiting_times else None)
-    ws.cell(row=total_row_idx, column=6, value=round(mean(handling_times), 2) if handling_times else None)
-    ws.cell(row=total_row_idx, column=7, value=sum(r.satisfied for r in stats))
-    ws.cell(row=total_row_idx, column=8, value=sum(r.neutral for r in stats))
-    ws.cell(row=total_row_idx, column=9, value=sum(r.needs_improvement for r in stats))
+    ws.cell(row=total_row_idx, column=3, value=sum(r.total_tickets or 0 for r in stats_sorted))
+    ws.cell(row=total_row_idx, column=4, value=sum(r.attended_tickets or 0 for r in stats_sorted))
+    ws.cell(row=total_row_idx, column=5, value=round(mean(waiting_times), 2) if waiting_times else 0)
+    ws.cell(row=total_row_idx, column=6, value=round(mean(handling_times), 2) if handling_times else 0)
+    ws.cell(row=total_row_idx, column=7, value=sum(r.satisfied or 0 for r in stats_sorted))
+    ws.cell(row=total_row_idx, column=8, value=sum(r.neutral or 0 for r in stats_sorted))
+    ws.cell(row=total_row_idx, column=9, value=sum(r.needs_improvement or 0 for r in stats_sorted))
 
     # style dòng tổng kết
     for col in range(1, 10):
@@ -702,3 +706,4 @@ def export_stats_excel(
         media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
         headers={"Content-Disposition": f"attachment; filename={filename}"}
     )
+
