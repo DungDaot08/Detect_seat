@@ -624,36 +624,38 @@ def export_stats_excel(
     )
 
     # --- Tiêu đề ---
-        # --- Format ngày dd/mm/yyyy ---
+    # --- Format ngày dd/mm/yyyy ---
     start_fmt = start.strftime("%d/%m/%Y") if start else ""
     end_fmt = end.strftime("%d/%m/%Y") if end else ""
 
     # --- Tiêu đề ---
     title = f"BÁO CÁO THỐNG KÊ THEO XÃ\n({start_fmt} → {end_fmt})"
-    ws.merge_cells("A1:I2")  # merge 2 dòng để có chỗ chứa xuống dòng
+    ws.merge_cells("A1:I2")  # merge 2 dòng cho tiêu đề
     cell = ws["A1"]
     cell.value = title
     cell.font = Font(bold=True, size=14, color="1F4E78")
     cell.alignment = Alignment(horizontal="center", vertical="center", wrap_text=True)
 
-    # --- Để trống 1 dòng, header bắt đầu từ dòng 3 ---
+    # --- Để trống dòng 3, header bắt đầu từ dòng 4 ---
+    ws.append([])
+    ws.append([])
     headers = [
         "Mã xã",
         "Tên xã",
         "Tổng vé",
         "Vé đã tiếp đón",
-        "Thời gian chờ trung bình (phút)",
-        "Thời gian tiếp đón trung bình (phút)",
+        "TG chờ TB (phút)",
+        "TG tiếp đón TB (phút)",
         "Hài lòng",
         "Bình thường",
         "Cần cải thiện",
     ]
-    ws.append([])  # dòng 2 trống
     ws.append(headers)
 
-    # style header (dòng 3)
+    # style header (dòng 4)
+    header_row_idx = 4
     for col in range(1, len(headers) + 1):
-        cell = ws.cell(row=4, column=col)
+        cell = ws.cell(row=header_row_idx, column=col)
         cell.font = bold_font
         cell.fill = header_fill
         cell.alignment = center_wrap
