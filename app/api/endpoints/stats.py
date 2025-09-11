@@ -654,7 +654,7 @@ def export_stats_excel(
     ws.row_dimensions[2].height = 25
 
     # --- Để trống dòng 3, header bắt đầu từ dòng 4 ---
-    ws.append([])
+    #ws.append([])
     ws.append([])
     headers = [
         "Mã xã",
