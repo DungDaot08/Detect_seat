@@ -579,11 +579,30 @@ def stats_by_tenxa(
     return results
 
 
+from fastapi import Query, Depends, APIRouter
 from fastapi.responses import StreamingResponse
+from sqlalchemy.orm import Session
+from typing import Optional
+from datetime import date
 import io
 import openpyxl
 from openpyxl.styles import Font, Alignment, PatternFill, Border, Side
 from statistics import mean
+
+from app import database
+from app.models import Ticket, Tenxa
+from .your_stats_file import stats_by_tenxa  # 👈 thay đúng đường dẫn file chứa stats_by_tenxa
+
+
+router = APIRouter()
+
+def get_stats_db():
+    db = database.StatsSessionLocal()  # 👈 nếu bạn dùng DB riêng cho thống kê
+    try:
+        yield db
+    finally:
+        db.close()
+
 
 @router.get("/all-unit/excel")
 def export_stats_excel(
@@ -591,7 +610,7 @@ def export_stats_excel(
     end_date: Optional[date] = Query(None),
     db: Session = Depends(get_stats_db),
 ):
-    start, end = get_date_range(start_date, end_date)
+    start, end = stats_by_tenxa.__globals__["get_date_range"](start_date, end_date)  # reuse util
     stats = stats_by_tenxa(start_date, end_date, db)
 
     # --- Sort theo mã xã ---
@@ -628,8 +647,8 @@ def export_stats_excel(
         "Tên xã",
         "Tổng vé",
         "Vé đã tiếp đón",
-        "TG chờ TB (giây)",
-        "TG tiếp đón TB (giây)",
+        "TG chờ TB (phút)",         # 👈 đổi thành phút
+        "TG tiếp đón TB (phút)",    # 👈 đổi thành phút
         "Hài lòng",
         "Bình thường",
         "Cần cải thiện",
@@ -650,21 +669,25 @@ def export_stats_excel(
     waiting_times = []
     handling_times = []
     for row in stats_sorted:
+        waiting_min = (row.avg_waiting_time_seconds or 0) / 60
+        handling_min = (row.avg_handling_time_seconds or 0) / 60
+
         ws.append([
             row.tenxa_id or 0,
             row.tenxa_name or "",
             row.total_tickets or 0,
             row.attended_tickets or 0,
-            round(row.avg_waiting_time_seconds, 2) if row.avg_waiting_time_seconds else 0,
-            round(row.avg_handling_time_seconds, 2) if row.avg_handling_time_seconds else 0,
+            round(waiting_min, 2),
+            round(handling_min, 2),
             row.satisfied or 0,
             row.neutral or 0,
             row.needs_improvement or 0,
         ])
+
         if row.avg_waiting_time_seconds:
-            waiting_times.append(row.avg_waiting_time_seconds)
+            waiting_times.append(waiting_min)
         if row.avg_handling_time_seconds:
-            handling_times.append(row.avg_handling_time_seconds)
+            handling_times.append(handling_min)
 
     # style dữ liệu
     for row in ws.iter_rows(min_row=4, max_row=ws.max_row, min_col=1, max_col=9):
