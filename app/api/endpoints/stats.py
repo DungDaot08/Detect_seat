@@ -383,6 +383,7 @@ def rating_per_counter(
         .filter(
             Ticket.tenxa_id == tenxa_id,
             Ticket.rating.isnot(None),
+            Ticket.status == "done",
             func.date(Ticket.created_at).between(start, end)
         )
         .group_by(Ticket.counter_id, Ticket.rating)
@@ -425,6 +426,7 @@ def list_feedbacks(
 
     q = db.query(Ticket).filter(
         Ticket.tenxa_id == tenxa_id,
+        Ticket.status == "done",
         #Ticket.feedback.isnot(None),
         func.date(Ticket.created_at).between(start, end)
     )
