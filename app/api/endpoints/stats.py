@@ -624,12 +624,9 @@ def export_stats_excel(
     )
 
     # --- Tiêu đề ---
-    # --- Format ngày dd/mm/yyyy ---
-    # --- Format ngày dd/mm/yyyy ---
     start_fmt = start.strftime("%d/%m/%Y") if start else ""
     end_fmt = end.strftime("%d/%m/%Y") if end else ""
 
-    # --- Tiêu đề 2 dòng ---
     title_line1 = "BÁO CÁO THỐNG KÊ THEO XÃ, PHƯỜNG"
     title_line2 = f"(Từ {start_fmt} đến {end_fmt})"
 
@@ -640,48 +637,63 @@ def export_stats_excel(
     # Dòng 1: tiêu đề chính
     cell1 = ws["A1"]
     cell1.value = title_line1
-    cell1.font = Font(bold=True, size=16, color="1F4E78")   # 👈 size to hơn
+    cell1.font = Font(bold=True, size=16, color="1F4E78")
     cell1.alignment = Alignment(horizontal="center", vertical="center")
 
     # Dòng 2: thời gian
     cell2 = ws["A2"]
     cell2.value = title_line2
-    cell2.font = Font(bold=False, size=12, color="1F4E78")  # 👈 nhỏ hơn
+    cell2.font = Font(bold=False, size=12, color="1F4E78")
     cell2.alignment = Alignment(horizontal="center", vertical="center")
 
     # --- Tăng độ cao dòng ---
     ws.row_dimensions[1].height = 35
     ws.row_dimensions[2].height = 25
 
-    # --- Để trống dòng 3, header bắt đầu từ dòng 4 ---
-    #ws.append([])
-    ws.append([])
-    headers = [
+    # --- Header 2 dòng ---
+    ws.append([])  # dòng trống (dòng 3)
+
+    # Dòng 4 (nhóm cột)
+    headers_line1 = [
         "Số thứ tự",
         "Tên xã",
-        "Tổng vé",
+        "Tổng vé đã in",
         "Vé đã tiếp đón",
         "Thời gian chờ trung bình (phút)",
         "Thời gian tiếp đón trung bình (phút)",
+        "ĐÁNH GIÁ", "", ""  # gộp 3 cột
+    ]
+    ws.append(headers_line1)
+
+    # Dòng 5 (các tiêu đề con)
+    headers_line2 = [
+        "", "", "", "", "", "",
         "Hài lòng",
         "Bình thường",
-        "Cần cải thiện",
+        "Cần cải thiện"
     ]
-    ws.append(headers)
+    ws.append(headers_line2)
 
-    # style header (dòng 4)
-    header_row_idx = 4
-    for col in range(1, len(headers) + 1):
-        cell = ws.cell(row=header_row_idx, column=col)
-        cell.font = bold_font
-        cell.fill = header_fill
-        cell.alignment = center_wrap
-        cell.border = thin_border
-        ws.column_dimensions[openpyxl.utils.get_column_letter(col)].width = 20
+    # Gộp ô cho các cột không có header con (dọc 2 dòng)
+    for col in range(1, 7):  # từ A tới F
+        ws.merge_cells(start_row=4, start_column=col, end_row=5, end_column=col)
+
+    # Gộp ô cho ĐÁNH GIÁ (3 cột G-H-I)
+    ws.merge_cells(start_row=4, start_column=7, end_row=4, end_column=9)
+
+    # --- Style cho header ---
+    for row in ws.iter_rows(min_row=4, max_row=5, min_col=1, max_col=9):
+        for cell in row:
+            cell.font = bold_font
+            cell.fill = header_fill
+            cell.alignment = center_wrap
+            cell.border = thin_border
+            ws.column_dimensions[openpyxl.utils.get_column_letter(cell.column)].width = 20
 
     # --- Dữ liệu ---
     waiting_times = []
     handling_times = []
+    row_index = 6  # dữ liệu bắt đầu từ dòng 6
     for row in stats_sorted:
         waiting_min = (row.avg_waiting_time_seconds or 0) / 60
         handling_min = (row.avg_handling_time_seconds or 0) / 60
@@ -704,7 +716,7 @@ def export_stats_excel(
             handling_times.append(handling_min)
 
     # style dữ liệu
-    for row in ws.iter_rows(min_row=4, max_row=ws.max_row, min_col=1, max_col=9):
+    for row in ws.iter_rows(min_row=6, max_row=ws.max_row, min_col=1, max_col=9):
         for cell in row:
             cell.alignment = center_wrap
             cell.border = thin_border
