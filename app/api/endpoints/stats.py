@@ -624,12 +624,17 @@ def export_stats_excel(
     )
 
     # --- Tiêu đề ---
-    title = f"BÁO CÁO THỐNG KÊ THEO XÃ (TỪ {start} ĐẾN {end})"
-    ws.merge_cells("A1:I1")
+        # --- Format ngày dd/mm/yyyy ---
+    start_fmt = start.strftime("%d/%m/%Y") if start else ""
+    end_fmt = end.strftime("%d/%m/%Y") if end else ""
+
+    # --- Tiêu đề ---
+    title = f"BÁO CÁO THỐNG KÊ THEO XÃ\n({start_fmt} → {end_fmt})"
+    ws.merge_cells("A1:I2")  # merge 2 dòng để có chỗ chứa xuống dòng
     cell = ws["A1"]
     cell.value = title
     cell.font = Font(bold=True, size=14, color="1F4E78")
-    cell.alignment = center_wrap
+    cell.alignment = Alignment(horizontal="center", vertical="center", wrap_text=True)
 
     # --- Để trống 1 dòng, header bắt đầu từ dòng 3 ---
     headers = [
@@ -648,7 +653,7 @@ def export_stats_excel(
 
     # style header (dòng 3)
     for col in range(1, len(headers) + 1):
-        cell = ws.cell(row=3, column=col)
+        cell = ws.cell(row=4, column=col)
         cell.font = bold_font
         cell.fill = header_fill
         cell.alignment = center_wrap
