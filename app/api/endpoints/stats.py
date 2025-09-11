@@ -625,18 +625,33 @@ def export_stats_excel(
 
     # --- Tiêu đề ---
     # --- Format ngày dd/mm/yyyy ---
+    # --- Format ngày dd/mm/yyyy ---
     start_fmt = start.strftime("%d/%m/%Y") if start else ""
     end_fmt = end.strftime("%d/%m/%Y") if end else ""
 
-    # --- Tiêu đề ---
-    title = f"BÁO CÁO THỐNG KÊ THEO XÃ\n( TỪ {start_fmt} ĐẾN {end_fmt})"
-    ws.merge_cells("A1:I2")  # merge 2 dòng cho tiêu đề
-    cell = ws["A1"]
-    cell.value = title
-    cell.font = Font(bold=True, size=14, color="1F4E78")
-    cell.alignment = Alignment(horizontal="center", vertical="center", wrap_text=True)
-    ws.row_dimensions[1].height = 30
-    ws.row_dimensions[2].height = 30
+    # --- Tiêu đề 2 dòng ---
+    title_line1 = "BÁO CÁO THỐNG KÊ THEO XÃ, PHƯỜNG"
+    title_line2 = f"(Từ {start_fmt} đến {end_fmt})"
+
+    # Merge ô cho cả 2 dòng
+    ws.merge_cells("A1:I1")
+    ws.merge_cells("A2:I2")
+
+    # Dòng 1: tiêu đề chính
+    cell1 = ws["A1"]
+    cell1.value = title_line1
+    cell1.font = Font(bold=True, size=16, color="1F4E78")   # 👈 size to hơn
+    cell1.alignment = Alignment(horizontal="center", vertical="center")
+
+    # Dòng 2: thời gian
+    cell2 = ws["A2"]
+    cell2.value = title_line2
+    cell2.font = Font(bold=False, size=12, color="1F4E78")  # 👈 nhỏ hơn
+    cell2.alignment = Alignment(horizontal="center", vertical="center")
+
+    # --- Tăng độ cao dòng ---
+    ws.row_dimensions[1].height = 35
+    ws.row_dimensions[2].height = 25
 
     # --- Để trống dòng 3, header bắt đầu từ dòng 4 ---
     ws.append([])
