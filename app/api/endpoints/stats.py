@@ -542,11 +542,13 @@ def stats_by_tenxa(
         )
         .filter(
             Ticket.rating.isnot(None),
+            Ticket.status == "done",   # 👈 chỉ lấy vé done
             func.date(Ticket.created_at).between(start, end)
         )
         .group_by(Ticket.tenxa_id, Ticket.rating)
         .all()
     )
+
 
     rating_map = defaultdict(lambda: {"satisfied": 0, "neutral": 0, "needs_improvement": 0})
     for tenxa_id, rating, count in rating_q:
