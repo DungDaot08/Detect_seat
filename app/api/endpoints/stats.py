@@ -635,6 +635,8 @@ def export_stats_excel(
     cell.value = title
     cell.font = Font(bold=True, size=14, color="1F4E78")
     cell.alignment = Alignment(horizontal="center", vertical="center", wrap_text=True)
+    ws.row_dimensions[1].height = 30
+    ws.row_dimensions[2].height = 30
 
     # --- Để trống dòng 3, header bắt đầu từ dòng 4 ---
     ws.append([])
