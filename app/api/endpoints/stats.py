@@ -609,7 +609,7 @@ def export_stats_excel(
     # --- Tạo workbook ---
     wb = openpyxl.Workbook()
     ws = wb.active
-    ws.title = "Thống kê xã"
+    ws.title = "Thống kê xã, phường"
 
     # --- Style cơ bản ---
     bold_font = Font(bold=True, size=12)
@@ -657,12 +657,12 @@ def export_stats_excel(
     #ws.append([])
     ws.append([])
     headers = [
-        "Mã xã",
+        "Số thứ tự",
         "Tên xã",
         "Tổng vé",
         "Vé đã tiếp đón",
         "Thời gian chờ trung bình (phút)",
-        "Thời gian đón trung bình (phút)",
+        "Thời gian tiếp đón trung bình (phút)",
         "Hài lòng",
         "Bình thường",
         "Cần cải thiện",
@@ -737,7 +737,7 @@ def export_stats_excel(
     wb.save(file_stream)
     file_stream.seek(0)
 
-    filename = f"thong_ke_xa_{start}_{end}.xlsx"
+    filename = f"Thong_ke_xa_phuong_{start}_{end}.xlsx"
     return StreamingResponse(
         file_stream,
         media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
