@@ -578,9 +578,12 @@ def stats_by_tenxa(
 
     return results
 
+
 from fastapi.responses import StreamingResponse
 import io
 import openpyxl
+from openpyxl.styles import Font, Alignment, PatternFill, Border, Side
+from statistics import mean
 
 @router.get("/all-unit/excel")
 def export_stats_excel(
@@ -589,14 +592,32 @@ def export_stats_excel(
     db: Session = Depends(get_stats_db),
 ):
     start, end = get_date_range(start_date, end_date)
-
-    # --- Lấy dữ liệu từ API stats_by_tenxa ---
     stats = stats_by_tenxa(start_date, end_date, db)
 
     # --- Tạo workbook ---
     wb = openpyxl.Workbook()
     ws = wb.active
     ws.title = "Thống kê xã"
+
+    # --- Style cơ bản ---
+    bold_font = Font(bold=True, size=12)
+    center_align = Alignment(horizontal="center", vertical="center")
+    header_fill = PatternFill("solid", fgColor="BDD7EE")  # xanh nhạt
+    total_fill = PatternFill("solid", fgColor="FFD966")   # vàng nhạt
+    thin_border = Border(
+        left=Side(style="thin"),
+        right=Side(style="thin"),
+        top=Side(style="thin"),
+        bottom=Side(style="thin"),
+    )
+
+    # --- Tiêu đề ---
+    title = f"BÁO CÁO THỐNG KÊ THEO XÃ ({start} → {end})"
+    ws.merge_cells("A1:I1")
+    cell = ws["A1"]
+    cell.value = title
+    cell.font = Font(bold=True, size=14, color="1F4E78")
+    cell.alignment = center_align
 
     # --- Header ---
     headers = [
@@ -612,7 +633,18 @@ def export_stats_excel(
     ]
     ws.append(headers)
 
+    # style header
+    for col in range(1, len(headers) + 1):
+        cell = ws.cell(row=2, column=col)
+        cell.font = bold_font
+        cell.fill = header_fill
+        cell.alignment = center_align
+        cell.border = thin_border
+        ws.column_dimensions[openpyxl.utils.get_column_letter(col)].width = 20
+
     # --- Dữ liệu ---
+    waiting_times = []
+    handling_times = []
     for row in stats:
         ws.append([
             row.tenxa_id,
@@ -625,6 +657,39 @@ def export_stats_excel(
             row.neutral,
             row.needs_improvement,
         ])
+        if row.avg_waiting_time_seconds:
+            waiting_times.append(row.avg_waiting_time_seconds)
+        if row.avg_handling_time_seconds:
+            handling_times.append(row.avg_handling_time_seconds)
+
+    # style dữ liệu
+    for row in ws.iter_rows(min_row=3, max_row=ws.max_row, min_col=1, max_col=9):
+        for cell in row:
+            cell.alignment = center_align
+            cell.border = thin_border
+
+    # --- Thêm dòng tổng kết ---
+    ws.append([])  # dòng trống
+    total_row_idx = ws.max_row + 1
+
+    ws.cell(row=total_row_idx, column=1, value="TỔNG KẾT")
+    ws.merge_cells(start_row=total_row_idx, start_column=1, end_row=total_row_idx, end_column=2)
+
+    ws.cell(row=total_row_idx, column=3, value=sum(r.total_tickets for r in stats))
+    ws.cell(row=total_row_idx, column=4, value=sum(r.attended_tickets for r in stats))
+    ws.cell(row=total_row_idx, column=5, value=round(mean(waiting_times), 2) if waiting_times else None)
+    ws.cell(row=total_row_idx, column=6, value=round(mean(handling_times), 2) if handling_times else None)
+    ws.cell(row=total_row_idx, column=7, value=sum(r.satisfied for r in stats))
+    ws.cell(row=total_row_idx, column=8, value=sum(r.neutral for r in stats))
+    ws.cell(row=total_row_idx, column=9, value=sum(r.needs_improvement for r in stats))
+
+    # style dòng tổng kết
+    for col in range(1, 10):
+        cell = ws.cell(row=total_row_idx, column=col)
+        cell.font = Font(bold=True)
+        cell.fill = total_fill
+        cell.alignment = center_align
+        cell.border = thin_border
 
     # --- Xuất file ---
     file_stream = io.BytesIO()
