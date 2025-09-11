@@ -756,3 +756,177 @@ def export_stats_excel(
         headers={"Content-Disposition": f"attachment; filename={filename}"}
     )
 
+@router.get("/all-unit/excel1")
+def export_stats_excel1(
+    start_date: Optional[date] = Query(None),
+    end_date: Optional[date] = Query(None),
+    db: Session = Depends(get_stats_db),
+):
+    start, end = stats_by_tenxa.__globals__["get_date_range"](start_date, end_date)  # reuse util
+    stats = stats_by_tenxa(start_date, end_date, db)
+
+    # --- Sort theo mã xã ---
+    stats_sorted = sorted(stats, key=lambda r: r.tenxa_id)
+
+    # --- Tạo workbook ---
+    wb = openpyxl.Workbook()
+    ws = wb.active
+    ws.title = "Thống kê xã, phường"
+
+    # --- Style cơ bản ---
+    bold_font = Font(bold=True, size=12)
+    center_wrap = Alignment(horizontal="center", vertical="center", wrap_text=True)
+    header_fill = PatternFill("solid", fgColor="BDD7EE")  # xanh nhạt
+    total_fill = PatternFill("solid", fgColor="FFD966")   # vàng nhạt
+    thin_border = Border(
+        left=Side(style="thin"),
+        right=Side(style="thin"),
+        top=Side(style="thin"),
+        bottom=Side(style="thin"),
+    )
+
+    # --- Tiêu đề ---
+    start_fmt = start.strftime("%d/%m/%Y") if start else ""
+    end_fmt = end.strftime("%d/%m/%Y") if end else ""
+
+    title_line1 = "BÁO CÁO THỐNG KÊ THEO XÃ, PHƯỜNG"
+    title_line2 = f"(Từ {start_fmt} đến {end_fmt})"
+
+    ws.merge_cells("A1:I1")
+    ws.merge_cells("A2:I2")
+
+    cell1 = ws["A1"]
+    cell1.value = title_line1
+    cell1.font = Font(bold=True, size=16, color="1F4E78")
+    cell1.alignment = Alignment(horizontal="center", vertical="center")
+
+    cell2 = ws["A2"]
+    cell2.value = title_line2
+    cell2.font = Font(bold=False, size=12, color="1F4E78")
+    cell2.alignment = Alignment(horizontal="center", vertical="center")
+
+    ws.row_dimensions[1].height = 35
+    ws.row_dimensions[2].height = 25
+
+    # --- Để trống dòng 3, header bắt đầu từ dòng 4 ---
+    ws.append([])
+    # Header dòng 4 (gộp 3 cột đánh giá)
+    headers_line1 = [
+        "STT",
+        "Tên xã",
+        "Tổng vé đã in",
+        "Vé đã tiếp đón",
+        "TG chờ TB (phút)",
+        "TG tiếp đón TB (phút)",
+        "Đánh giá",
+        "",
+        "",
+    ]
+    ws.append(headers_line1)
+    ws.merge_cells("G4:I4")
+
+    # Header dòng 5
+    headers_line2 = [
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "Hài lòng",
+        "Bình thường",
+        "Cần cải thiện",
+    ]
+    ws.append(headers_line2)
+
+    # style header
+    for row_idx in (4, 5):
+        for col in range(1, len(headers_line1) + 1):
+            cell = ws.cell(row=row_idx, column=col)
+            cell.font = bold_font
+            cell.fill = header_fill
+            cell.alignment = center_wrap
+            cell.border = thin_border
+            ws.column_dimensions[openpyxl.utils.get_column_letter(col)].width = 20
+
+    # --- Dữ liệu ---
+    waiting_times = []
+    handling_times = []
+    start_data_row = 6
+    for idx, row in enumerate(stats_sorted, start=1):
+        waiting_min = (row.avg_waiting_time_seconds or 0) / 60
+        handling_min = (row.avg_handling_time_seconds or 0) / 60
+
+        ws.append([
+            idx,  # STT
+            row.tenxa_name or "",
+            row.total_tickets or 0,
+            row.attended_tickets or 0,
+            round(waiting_min, 1),
+            round(handling_min, 1),
+            row.satisfied or 0,
+            row.neutral or 0,
+            row.needs_improvement or 0,
+        ])
+
+        if row.avg_waiting_time_seconds:
+            waiting_times.append(waiting_min)
+        if row.avg_handling_time_seconds:
+            handling_times.append(handling_min)
+
+    last_data_row = ws.max_row
+
+    # style dữ liệu + format số
+    for row in ws.iter_rows(min_row=start_data_row, max_row=last_data_row, min_col=1, max_col=9):
+        for col_idx, cell in enumerate(row, start=1):
+            cell.alignment = center_wrap
+            cell.border = thin_border
+
+            # --- Format số ---
+            if col_idx in (3, 4, 7, 8, 9):  # vé và đánh giá -> số nguyên
+                cell.number_format = "0"
+            elif col_idx in (5, 6):  # thời gian trung bình -> 1 số lẻ
+                cell.number_format = "0.0"
+
+    # --- Thêm dòng tổng kết ---
+    ws.append([])  # dòng trống
+    total_row_idx = ws.max_row + 1
+
+    ws.cell(row=total_row_idx, column=1, value="TỔNG KẾT")
+    ws.merge_cells(start_row=total_row_idx, start_column=1, end_row=total_row_idx, end_column=2)
+
+    ws.cell(row=total_row_idx, column=3, value=sum(r.total_tickets or 0 for r in stats_sorted))
+    ws.cell(row=total_row_idx, column=4, value=sum(r.attended_tickets or 0 for r in stats_sorted))
+    ws.cell(row=total_row_idx, column=5, value=round(mean(waiting_times), 1) if waiting_times else 0)
+    ws.cell(row=total_row_idx, column=6, value=round(mean(handling_times), 1) if handling_times else 0)
+    ws.cell(row=total_row_idx, column=7, value=sum(r.satisfied or 0 for r in stats_sorted))
+    ws.cell(row=total_row_idx, column=8, value=sum(r.neutral or 0 for r in stats_sorted))
+    ws.cell(row=total_row_idx, column=9, value=sum(r.needs_improvement or 0 for r in stats_sorted))
+
+    for col in range(1, 10):
+        cell = ws.cell(row=total_row_idx, column=col)
+        cell.font = Font(bold=True)
+        cell.fill = total_fill
+        cell.alignment = center_wrap
+        cell.border = thin_border
+
+        # --- Format số cho tổng kết ---
+        if col in (3, 4, 7, 8, 9):
+            cell.number_format = "0"
+        elif col in (5, 6):
+            cell.number_format = "0.0"
+
+    # --- AutoFilter cho dữ liệu, không bao gồm dòng tổng kết ---
+    ws.auto_filter.ref = f"A5:I{last_data_row}"
+
+    # --- Xuất file ---
+    file_stream = io.BytesIO()
+    wb.save(file_stream)
+    file_stream.seek(0)
+
+    filename = f"Thong_ke_xa_phuong_{start}_{end}.xlsx"
+    return StreamingResponse(
+        file_stream,
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        headers={"Content-Disposition": f"attachment; filename={filename}"}
+    )
