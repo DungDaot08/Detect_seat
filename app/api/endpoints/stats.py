@@ -629,7 +629,7 @@ def export_stats_excel(
     end_fmt = end.strftime("%d/%m/%Y") if end else ""
 
     # --- Tiêu đề ---
-    title = f"BÁO CÁO THỐNG KÊ THEO XÃ\n({start_fmt} → {end_fmt})"
+    title = f"BÁO CÁO THỐNG KÊ THEO XÃ\n( TỪ {start_fmt} ĐẾN {end_fmt})"
     ws.merge_cells("A1:I2")  # merge 2 dòng cho tiêu đề
     cell = ws["A1"]
     cell.value = title
