@@ -29,7 +29,7 @@ def get_transfer_permissions(tenxa: str, db: Session = Depends(get_db)):
             schemas.TransferPermissionOut(
                 id=p.id,
                 source_counter_id=p.source_counter_id,
-                source_counter_name=p.source_counter.name if p.source_counter else None,
+                source_counter_name=crud.get_counter_name_from_counter_id(db, p.source_counter_id, tenxa_id) if p.source_counter_id else None,
                 target_counter_ids=p.target_counter_ids,
                 target_counter_names=target_names,
                 enabled=p.enabled,
@@ -134,7 +134,7 @@ def delete_transfer_permission(permission_id: int, tenxa: str, db: Session = Dep
     if not permission:
         raise HTTPException(status_code=404, detail="Permission not found")
 
-    source_counter_name = permission.source_counter.name if permission.source_counter else None
+    source_counter_name = crud.get_counter_name_from_counter_id(db, permission.source_counter_id, tenxa_id) if permission.source_counter_id else None
 
     db.delete(permission)
     db.commit()
