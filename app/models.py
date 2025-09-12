@@ -212,6 +212,3 @@ class TransferPermission(Base):
     enabled = Column(Boolean, default=True)
     created_at = Column(DateTime(timezone=True), default=func.now())
     updated_at = Column(DateTime(timezone=True), default=func.now(), onupdate=func.now())
-
-    source_counter = relationship("Counter", foreign_keys=[source_counter_id])
-    tenxa = relationship("Tenxa")
