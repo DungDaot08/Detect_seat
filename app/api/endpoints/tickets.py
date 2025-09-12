@@ -286,7 +286,7 @@ def transfer_tickets(
         background_tasks.add_task(
             notify_frontend,
             {
-                "event": "new_ticket",
+                "event": "tickets_transferred_multiple",
                 "ticket_number": ticket_number,
                 "counter_name": counter_name,
                 "counter_id": target_counter_id,

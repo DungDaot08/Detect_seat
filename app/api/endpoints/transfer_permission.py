@@ -1,9 +1,10 @@
-from fastapi import APIRouter, Depends, Query, HTTPException
+from fastapi import APIRouter, Depends, Query, BackgroundTasks, HTTPException
 from sqlalchemy.orm import Session
 from typing import List
 from datetime import datetime
 from app import models, schemas, crud
 from app.auth import get_db
+from app.api.endpoints.realtime import notify_frontend
 
 router = APIRouter()
 
@@ -23,6 +24,7 @@ def get_transfer_permissions(tenxa: str, db: Session = Depends(get_db)):
             c.name
             for c in db.query(models.Counter)
             .filter(models.Counter.id.in_(p.target_counter_ids))
+            .filter(models.Counter.tenxa_id == tenxa_id)
             .all()
         ]
         result.append(
@@ -45,6 +47,7 @@ def get_transfer_permissions(tenxa: str, db: Session = Depends(get_db)):
 def upsert_transfer_permission(
     tenxa: str,
     data: schemas.TransferPermissionCreate,
+    background_tasks: BackgroundTasks,
     db: Session = Depends(get_db)
 ):
     tenxa_id = crud.get_tenxa_id_from_slug(db, tenxa)
@@ -73,6 +76,21 @@ def upsert_transfer_permission(
 
     db.commit()
     db.refresh(permission)
+
+    # 🔔 Gửi event qua WebSocket
+    background_tasks.add_task(
+        notify_frontend, {
+            "event": "transfer_permission_updated",
+            "data": {
+                "id": permission.id,
+                "source_counter_id": permission.source_counter_id,
+                "target_counter_ids": permission.target_counter_ids,
+                "enabled": permission.enabled,
+                "updated_at": permission.updated_at.isoformat(),
+                "tenxa": tenxa
+            }
+        }
+    )
 
     return {
         "success": True,
