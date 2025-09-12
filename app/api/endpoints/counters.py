@@ -354,3 +354,42 @@ def upsert_counter(
         }
     )
     return counter
+
+@router.get("/available-for-transfer", response_model=List[schemas.Counter])
+def get_available_counters_for_transfer(
+    tenxa: str = Query(...),
+    db: Session = Depends(get_db),
+):
+    """
+    Lấy danh sách các quầy không có vé "waiting" hoặc "called" trong ngày hôm nay.
+    """
+    tenxa_id = crud.get_tenxa_id_from_slug(db, tenxa)
+
+    # Lấy thời gian đầu ngày và cuối ngày (theo giờ VN)
+    tz = pytz.timezone("Asia/Ho_Chi_Minh")
+    today = datetime.now(tz).date()
+    start_of_day = datetime.combine(today, datetime.min.time()).astimezone(tz)
+    end_of_day = datetime.combine(today, datetime.max.time()).astimezone(tz)
+
+    # Subquery: lấy các counter_id có ticket waiting/called trong hôm nay
+    busy_counter_ids = (
+        db.query(models.Ticket.counter_id)
+        .filter(models.Ticket.tenxa_id == tenxa_id)
+        .filter(models.Ticket.created_at >= start_of_day)
+        .filter(models.Ticket.created_at <= end_of_day)
+        .filter(models.Ticket.status.in_(["waiting", "called"]))
+        .distinct()
+        .all()
+    )
+    busy_counter_ids = [c[0] for c in busy_counter_ids]
+
+    # Lấy counter không nằm trong busy list
+    available_counters = (
+        db.query(models.Counter)
+        .filter(models.Counter.tenxa_id == tenxa_id)
+        .filter(~models.Counter.id.in_(busy_counter_ids))
+        .order_by(models.Counter.id)
+        .all()
+    )
+
+    return available_counters

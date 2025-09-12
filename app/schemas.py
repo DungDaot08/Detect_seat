@@ -201,3 +201,34 @@ class TenXaConfigResponse(BaseModel):
 
     class Config:
         orm_mode = True
+        
+class TransferPermissionBase(BaseModel):
+    source_counter_id: int
+    target_counter_ids: List[int]
+    enabled: bool = True
+    tenxa: str
+
+class TransferPermissionCreate(TransferPermissionBase):
+    pass
+
+class TransferPermissionUpdate(TransferPermissionBase):
+    pass
+
+class TransferPermissionOut(BaseModel):
+    id: int
+    source_counter_id: int
+    source_counter_name: Optional[str]
+    target_counter_ids: List[int]
+    target_counter_names: Optional[List[str]] = []
+    enabled: bool
+    created_at: datetime
+    updated_at: Optional[datetime]
+    tenxa: str
+
+    class Config:
+        orm_mode = True
+
+class TransferPermissionCheck(BaseModel):
+    has_permission: bool
+    permission: Optional[TransferPermissionOut]
+    available_targets: Optional[List[dict]] = []

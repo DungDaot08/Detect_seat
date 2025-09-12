@@ -204,8 +204,8 @@ def get_ticket_feedback_info_new(
         "feedback": ticket.feedback
     }
 
-@router.put("/transfer", response_model=schemas.Ticket)
-def transfer_ticket(
+@router.put("/transfer-single", response_model=schemas.Ticket)
+def transfer_ticket_single(
     background_tasks: BackgroundTasks, 
     ticket_number: int = Query(..., description="Số vé cần chuyển"),
     target_counter_id: int = Query(..., description="Quầy đích cần chuyển tới"), 
@@ -246,3 +246,56 @@ def transfer_ticket(
     db.refresh(ticket)
 
     return ticket
+
+from typing import List
+
+@router.put("/transfer", response_model=List[schemas.Ticket])
+def transfer_tickets(
+    background_tasks: BackgroundTasks,
+    ticket_numbers: List[int] = Query(..., description="Danh sách số vé cần chuyển"),
+    target_counter_id: int = Query(..., description="Quầy đích cần chuyển tới"),
+    tenxa: str = Query(...),
+    db: Session = Depends(get_db)
+):
+    tenxa_id = crud.get_tenxa_id_from_slug(db, tenxa)
+
+    # Kiểm tra quầy đích có đang bận không
+    waiting = crud.get_waiting_tickets(db, tenxa_id, target_counter_id)
+    called = crud.get_called_tickets(db, tenxa_id, target_counter_id)
+    if waiting or called:
+        raise HTTPException(status_code=400, detail="Quầy đích đang bận, không thể chuyển vé")
+
+    # Lấy tên quầy đích
+    counter_name = crud.get_counter_name_from_counter_id(db, target_counter_id, tenxa_id)
+
+    transferred_tickets = []
+    for ticket_number in ticket_numbers:
+        ticket = crud.get_ticket(db, tenxa_id, ticket_number)
+        if not ticket:
+            raise HTTPException(status_code=404, detail=f"Không tìm thấy vé {ticket_number}")
+
+        if ticket.status != "waiting":
+            raise HTTPException(status_code=400, detail=f"Vé {ticket_number} không ở trạng thái waiting, không thể chuyển")
+
+        # Cập nhật counter_id
+        ticket.counter_id = target_counter_id
+        db.add(ticket)
+        transferred_tickets.append(ticket)
+
+        # Notify frontend từng vé
+        background_tasks.add_task(
+            notify_frontend,
+            {
+                "event": "new_ticket",
+                "ticket_number": ticket_number,
+                "counter_name": counter_name,
+                "counter_id": target_counter_id,
+                "tenxa": tenxa
+            }
+        )
+
+    db.commit()
+    for ticket in transferred_tickets:
+        db.refresh(ticket)
+
+    return transferred_tickets

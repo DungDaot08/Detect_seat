@@ -4,6 +4,7 @@ from app.database import Base
 from sqlalchemy.dialects.postgresql import ARRAY
 from sqlalchemy import Enum as PgEnum
 import enum
+from datetime import datetime
 
 class Field(Base):
     __tablename__ = "fields"
@@ -200,3 +201,17 @@ class TvGroup(Base):
     tenxa_id = Column(Integer, nullable=False)
     counter_ids = Column(ARRAY(Integer), nullable=False, default=[])
     tts_enable = Column(Boolean, default=True)
+
+class TransferPermission(Base):
+    __tablename__ = "transfer_permissions"
+
+    id = Column(Integer, primary_key=True, index=True)
+    tenxa_id = Column(Integer, ForeignKey("tenxa.id", ondelete="CASCADE"), nullable=False)
+    source_counter_id = Column(Integer, ForeignKey("counters.id", ondelete="CASCADE"), nullable=False)
+    target_counter_ids = Column(ARRAY(Integer), nullable=False, default=[])
+    enabled = Column(Boolean, default=True)
+    created_at = Column(DateTime(timezone=True), default=func.now())
+    updated_at = Column(DateTime(timezone=True), default=func.now(), onupdate=func.now())
+
+    source_counter = relationship("Counter", foreign_keys=[source_counter_id])
+    tenxa = relationship("Tenxa")
