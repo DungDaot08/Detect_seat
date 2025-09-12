@@ -146,7 +146,7 @@ def check_transfer_permission(counter_id: int, tenxa: str, db: Session = Depends
 
 # D. Xóa phân quyền
 @router.delete("/{permission_id}")
-def delete_transfer_permission(permission_id: int, tenxa: str, db: Session = Depends(get_db)):
+def delete_transfer_permission(permission_id: int, tenxa: str, background_tasks: BackgroundTasks, db: Session = Depends(get_db)):
     tenxa_id = crud.get_tenxa_id_from_slug(db, tenxa)
     permission = db.query(models.TransferPermission).filter(models.TransferPermission.id == permission_id).filter(models.TransferPermission.tenxa_id == tenxa_id).first()
     if not permission:
@@ -156,6 +156,17 @@ def delete_transfer_permission(permission_id: int, tenxa: str, db: Session = Dep
 
     db.delete(permission)
     db.commit()
+    
+    background_tasks.add_task(
+        notify_frontend, {
+            "event": "transfer_permission_deleted",
+            "data": {
+                "id": permission_id,
+                "source_counter_id": permission.source_counter_id,
+                "tenxa": tenxa
+            }
+        }
+    )
 
     return {
         "success": True,
