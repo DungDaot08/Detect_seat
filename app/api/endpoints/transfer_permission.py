@@ -8,7 +8,7 @@ from app.auth import get_db
 router = APIRouter()
 
 # A. Lấy danh sách phân quyền
-@router.get("/transfer-permissions", response_model=List[schemas.TransferPermissionOut])
+@router.get("/", response_model=List[schemas.TransferPermissionOut])
 def get_transfer_permissions(tenxa: str, db: Session = Depends(get_db)):
     tenxa_id = crud.get_tenxa_id_from_slug(db, tenxa)
     permissions = (
@@ -41,7 +41,7 @@ def get_transfer_permissions(tenxa: str, db: Session = Depends(get_db)):
     return result
 
 # B. Tạo/Cập nhật phân quyền
-@router.post("/transfer-permissions")
+@router.post("/")
 def upsert_transfer_permission(
     tenxa: str,
     data: schemas.TransferPermissionCreate,
@@ -81,7 +81,7 @@ def upsert_transfer_permission(
     }
 
 # C. Kiểm tra quyền cho một quầy cụ thể
-@router.get("/transfer-permissions/{counter_id}", response_model=schemas.TransferPermissionCheck)
+@router.get("/{counter_id}", response_model=schemas.TransferPermissionCheck)
 def check_transfer_permission(counter_id: int, tenxa: str, db: Session = Depends(get_db)):
     tenxa_id = crud.get_tenxa_id_from_slug(db, tenxa)
 
@@ -127,7 +127,7 @@ def check_transfer_permission(counter_id: int, tenxa: str, db: Session = Depends
     }
 
 # D. Xóa phân quyền
-@router.delete("/transfer-permissions/{permission_id}")
+@router.delete("/{permission_id}")
 def delete_transfer_permission(permission_id: int, tenxa: str, db: Session = Depends(get_db)):
     tenxa_id = crud.get_tenxa_id_from_slug(db, tenxa)
     permission = db.query(models.TransferPermission).filter(models.TransferPermission.id == permission_id).filter(models.TransferPermission.tenxa_id == tenxa_id).first()
