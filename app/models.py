@@ -206,8 +206,8 @@ class TransferPermission(Base):
     __tablename__ = "transfer_permissions"
 
     id = Column(Integer, primary_key=True, index=True)
-    tenxa_id = Column(Integer, ForeignKey("tenxa.id", ondelete="CASCADE"), nullable=False)
-    source_counter_id = Column(Integer, ForeignKey("counters.id", ondelete="CASCADE"), nullable=False)
+    tenxa_id = Column(Integer, nullable=False)
+    source_counter_id = Column(Integer, nullable=False)
     target_counter_ids = Column(ARRAY(Integer), nullable=False, default=[])
     enabled = Column(Boolean, default=True)
     created_at = Column(DateTime(timezone=True), default=func.now())

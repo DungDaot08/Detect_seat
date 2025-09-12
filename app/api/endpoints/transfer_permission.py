@@ -43,10 +43,11 @@ def get_transfer_permissions(tenxa: str, db: Session = Depends(get_db)):
 # B. Tạo/Cập nhật phân quyền
 @router.post("/transfer-permissions")
 def upsert_transfer_permission(
+    tenxa: str,
     data: schemas.TransferPermissionCreate,
     db: Session = Depends(get_db)
 ):
-    tenxa_id = crud.get_tenxa_id_from_slug(db, data.tenxa)
+    tenxa_id = crud.get_tenxa_id_from_slug(db, tenxa)
 
     permission = (
         db.query(models.TransferPermission)

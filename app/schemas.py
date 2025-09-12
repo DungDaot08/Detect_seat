@@ -206,7 +206,6 @@ class TransferPermissionBase(BaseModel):
     source_counter_id: int
     target_counter_ids: List[int]
     enabled: bool = True
-    tenxa: str
 
 class TransferPermissionCreate(TransferPermissionBase):
     pass
@@ -223,7 +222,6 @@ class TransferPermissionOut(BaseModel):
     enabled: bool
     created_at: datetime
     updated_at: Optional[datetime]
-    tenxa: str
 
     class Config:
         orm_mode = True
