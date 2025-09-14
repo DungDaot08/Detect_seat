@@ -214,3 +214,10 @@ class TransferPermission(Base):
     enabled = Column(Boolean, default=True)
     created_at = Column(DateTime(timezone=True), default=func.now())
     updated_at = Column(DateTime(timezone=True), default=func.now(), onupdate=func.now())
+
+class DossierAgency(Base):
+    __tablename__ = "dossiers"
+
+    id = Column(Integer, primary_key=True, index=True)
+    tenxa_id = Column(Integer, unique=True, nullable=False)   # integer id của xã
+    agency_id = Column(String, nullable=False)  

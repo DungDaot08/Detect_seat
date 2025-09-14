@@ -5,6 +5,10 @@ from fastapi import APIRouter, Depends, HTTPException, Query, BackgroundTasks
 from app import crud, schemas, database, models
 from sqlalchemy.orm import Session
 
+def get_agency_id_by_tenxa(db: Session, tenxa_id: int) -> str | None:
+    record = db.query(models.DossierAgency).filter(models.DossierAgency.tenxa_id == tenxa_id).first()
+    return record.agency_id if record else None
+
 def get_db():
     db = database.SessionLocal()
     try:
@@ -122,13 +126,18 @@ def get_access_token():
 
 @router.get("/")
 def get_dossiers(tenxa: str = Query(...), db: Session = Depends(get_db)):
+    tenxa_id = crud.get_tenxa_id_from_slug(db, tenxa)
     token = get_access_token()
+
+    agency_id = get_agency_id_by_tenxa(db, tenxa_id)
+    if not agency_id:
+        raise HTTPException(status_code=404, detail=f"Không tìm thấy agency_id cho xã có id={tenxa_id}")
 
     params = {
         "page": 0,
         "size": 50,
         "spec": "page",
-        "ancestor-agency-id": "6853b890edeb9d6b96aac02f",
+        "ancestor-agency-id": agency_id,
         "sort": "updatedDate,desc",
         "remove-status": 18,
         "isAgencySearch": "true",
