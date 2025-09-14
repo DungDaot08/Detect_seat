@@ -3,7 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi_utils.tasks import repeat_every
 from contextlib import asynccontextmanager
 import asyncio
-from app.api.endpoints import procedures, tickets, seats, counters, users, realtime, text_to_speech, stats, footer, tv_groups, transfer_permission
+from app.api.endpoints import procedures, tickets, seats, counters, users, realtime, text_to_speech, stats, footer, tv_groups, transfer_permission, dossiers
 from app.database import engine, Base, SessionLocal
 #from app.background.auto_call import check_and_call_next
 from app.models import Counter, Tenxa
@@ -64,4 +64,5 @@ app.include_router(stats.router, prefix="/stats", tags=["Stats"])
 app.include_router(footer.router, prefix="/configs", tags=["Configs"])
 app.include_router(tv_groups.router, prefix="/tv_groups", tags=["Tv_groupss"])
 app.include_router(transfer_permission.router, prefix="/transfer_permission", tags=["Transfer_permission"])
+app.include_router(dossiers.router, prefix="/dossiers", tags=["Dossiers"])
 app.include_router(realtime.router)

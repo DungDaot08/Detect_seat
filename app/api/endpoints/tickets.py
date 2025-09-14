@@ -233,10 +233,12 @@ def transfer_ticket_single(
     background_tasks.add_task(
         notify_frontend, {
             "event": "new_ticket",
-            "ticket_number": ticket_number,
-            "counter_name": counter_name,
-            "counter_id": target_counter_id,
-            "tenxa": tenxa
+            "data":{
+                "ticket_number": ticket_number,
+                "counter_name": counter_name,
+                "counter_id": target_counter_id,
+                "tenxa": tenxa
+            }
         }
     )
 
