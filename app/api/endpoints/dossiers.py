@@ -22,7 +22,7 @@ CLIENT_ID = "test-public"
 USERNAME = "duytc.hgg"
 PASSWORD = "Cntt@135"
 
-@router.get("/dossiers_old")
+@router.get("/old")
 def get_dossiers_old(tenxa: str = Query(...), db: Session = Depends(get_db)):
     # 1. Lấy access token
     token_payload = {
@@ -120,7 +120,7 @@ def get_access_token():
 
     return access_token
 
-@router.get("/dossiers")
+@router.get("/")
 def get_dossiers(tenxa: str = Query(...), db: Session = Depends(get_db)):
     token = get_access_token()
 
