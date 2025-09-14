@@ -1,9 +1,9 @@
 from fastapi import FastAPI, HTTPException
 import requests
 import os
+from fastapi import APIRouter, Depends, HTTPException, Query, BackgroundTasks
 
-app = FastAPI()
-
+router = APIRouter()
 # Config
 TOKEN_URL = "https://ssodvc.tuyenquang.gov.vn/auth/realms/digo/protocol/openid-connect/token"
 DOSSIER_URL = "https://apiigate.tuyenquang.gov.vn/pa/dossier/search"
@@ -13,7 +13,7 @@ CLIENT_ID = "test-public"
 USERNAME = "duytc.hgg"
 PASSWORD = "Cntt@135"
 
-@app.get("/dossiers")
+@router.get("/dossiers")
 def get_dossiers(page: int = 0, size: int = 10):
     # 1. Lấy access token
     token_payload = {
