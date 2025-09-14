@@ -2,6 +2,15 @@ from fastapi import FastAPI, HTTPException
 import requests
 import os
 from fastapi import APIRouter, Depends, HTTPException, Query, BackgroundTasks
+from app import crud, schemas, database, models
+from sqlalchemy.orm import Session
+
+def get_db():
+    db = database.SessionLocal()
+    try:
+        yield db
+    finally:
+        db.close()
 
 router = APIRouter()
 # Config
@@ -13,8 +22,8 @@ CLIENT_ID = "test-public"
 USERNAME = "duytc.hgg"
 PASSWORD = "Cntt@135"
 
-@router.get("/dossiers")
-def get_dossiers():
+@router.get("/dossiers_old")
+def get_dossiers_old(tenxa: str = Query(...), db: Session = Depends(get_db)):
     # 1. Lấy access token
     token_payload = {
         "grant_type": "password",
@@ -111,15 +120,15 @@ def get_access_token():
 
     return access_token
 
-@router.get("/dossiers1")
-def get_dossiers1():
+@router.get("/dossiers")
+def get_dossiers(tenxa: str = Query(...), db: Session = Depends(get_db)):
     token = get_access_token()
 
     params = {
         "page": 0,
         "size": 50,
         "spec": "page",
-        "ancestor-agency-id": "6853b890edeb9d6b96aac021",
+        "ancestor-agency-id": "6853b890edeb9d6b96aac02f",
         "sort": "updatedDate,desc",
         "remove-status": 18,
         "isAgencySearch": "true",
