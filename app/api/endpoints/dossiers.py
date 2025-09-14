@@ -14,7 +14,7 @@ USERNAME = "duytc.hgg"
 PASSWORD = "Cntt@135"
 
 @router.get("/dossiers")
-def get_dossiers(page: int = 0, size: int = 10):
+def get_dossiers():
     # 1. Lấy access token
     token_payload = {
         "grant_type": "password",
@@ -35,11 +35,14 @@ def get_dossiers(page: int = 0, size: int = 10):
 
     # 2. Gọi API danh sách hồ sơ
     dossier_params = {
-        "page": page,
-        "size": size,
+        "page": 0,
+        "size": 50,
         "spec": "page",
         "ancestor-agency-id": "6853b890edeb9d6b96aac021",
-        "sort": "updatedDate,desc"
+        "sort": "updatedDate,desc",
+        "remove-status": 18,
+        "isAgencySearch": "true",
+        "task-status-id": "642cee9d3181093fe0519363"
     }
     dossier_headers = {
         "Accept": "application/json",
