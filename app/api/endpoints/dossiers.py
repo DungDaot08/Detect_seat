@@ -4,6 +4,14 @@ import os
 from fastapi import APIRouter, Depends, HTTPException, Query, BackgroundTasks
 from app import crud, schemas, database, models
 from sqlalchemy.orm import Session
+import unicodedata
+
+def normalize_text(text: str) -> str:
+    if not text:
+        return ""
+    text = unicodedata.normalize("NFD", text)
+    text = "".join(c for c in text if unicodedata.category(c) != "Mn")
+    return text.lower()
 
 def get_agency_id_by_tenxa(db: Session, tenxa_id: int) -> str | None:
     record = db.query(models.DossierAgency).filter(models.DossierAgency.tenxa_id == tenxa_id).first()
@@ -176,7 +184,7 @@ def search_dossiers(
     if not agency_id:
         raise HTTPException(status_code=404, detail=f"Không tìm thấy agency_id cho xã id={tenxa_id}")
 
-    # Gọi API lấy danh sách hồ sơ (giống get_dossiers)
+    # Gọi API lấy danh sách hồ sơ
     params = {
         "page": 0,
         "size": 50,
@@ -195,17 +203,19 @@ def search_dossiers(
 
     dossiers = resp.json().get("content", [])
 
-    # Lọc danh sách theo keyword (case-insensitive)
-    keyword_lower = keyword.lower()
-    results = [
-        {
-            "code": d.get("code"),
-            "ho_ten": d.get("applicant", {}).get("data", {}).get("fullname"),
-            "ngay_nop": d.get("appliedDate"),
-            "ngay_co_ket_qua": d.get("completedDate")
-        }
-        for d in dossiers
-        if keyword_lower in (d.get("applicant", {}).get("data", {}).get("fullname") or "").lower()
-    ]
+    # Chuẩn hoá keyword
+    keyword_norm = normalize_text(keyword)
+
+    # Lọc kết quả theo tên (không dấu, không phân biệt hoa thường)
+    results = []
+    for d in dossiers:
+        fullname = d.get("applicant", {}).get("data", {}).get("fullname") or ""
+        if keyword_norm in normalize_text(fullname):
+            results.append({
+                "code": d.get("code"),
+                "ho_ten": fullname,
+                "ngay_nop": d.get("appliedDate"),
+                "ngay_co_ket_qua": d.get("completedDate")
+            })
 
     return {"total": len(results), "dossiers": results}
