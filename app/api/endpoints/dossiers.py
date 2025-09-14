@@ -161,3 +161,51 @@ def get_dossiers(tenxa: str = Query(...), db: Session = Depends(get_db)):
     ]
 
     return {"total": len(results), "dossiers": results}
+
+@router.get("/search-dossiers")
+def search_dossiers(
+    tenxa: str = Query(...),
+    keyword: str = Query(..., description="Tên người nộp hồ sơ"),
+    db: Session = Depends(get_db)
+):
+    token = get_access_token()
+    tenxa_id = crud.get_tenxa_id_from_slug(db, tenxa)
+
+    # Lấy agency_id từ DB
+    agency_id = get_agency_id_by_tenxa(db, tenxa_id)
+    if not agency_id:
+        raise HTTPException(status_code=404, detail=f"Không tìm thấy agency_id cho xã id={tenxa_id}")
+
+    # Gọi API lấy danh sách hồ sơ (giống get_dossiers)
+    params = {
+        "page": 0,
+        "size": 50,
+        "spec": "page",
+        "ancestor-agency-id": agency_id,
+        "sort": "updatedDate,desc",
+        "remove-status": 18,
+        "isAgencySearch": "true",
+        "task-status-id": "642cee9d3181093fe0519363"
+    }
+    headers = {"Accept": "application/json", "Authorization": f"Bearer {token}"}
+
+    resp = requests.get(DOSSIER_URL, params=params, headers=headers)
+    if resp.status_code != 200:
+        raise HTTPException(status_code=resp.status_code, detail="Không lấy được danh sách hồ sơ")
+
+    dossiers = resp.json().get("content", [])
+
+    # Lọc danh sách theo keyword (case-insensitive)
+    keyword_lower = keyword.lower()
+    results = [
+        {
+            "code": d.get("code"),
+            "ho_ten": d.get("applicant", {}).get("data", {}).get("fullname"),
+            "ngay_nop": d.get("appliedDate"),
+            "ngay_co_ket_qua": d.get("completedDate")
+        }
+        for d in dossiers
+        if keyword_lower in (d.get("applicant", {}).get("data", {}).get("fullname") or "").lower()
+    ]
+
+    return {"total": len(results), "dossiers": results}
