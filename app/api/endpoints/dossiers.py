@@ -13,7 +13,7 @@ def normalize_text(text: str) -> str:
     text = "".join(c for c in text if unicodedata.category(c) != "Mn")
     return text.lower()
 
-def get_agency_id_by_tenxa(db: Session, tenxa_id: int) -> str | None:
+def get_agency_id_by_tenxa(db: Session, tenxa_id: int) -> str:
     record = db.query(models.DossierAgency).filter(models.DossierAgency.tenxa_id == tenxa_id).first()
     return record.agency_id if record else None
 
