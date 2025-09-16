@@ -3,7 +3,7 @@ from pydantic import BaseModel
 from typing import List, Optional
 from datetime import date, datetime
 from sqlalchemy.orm import Session
-from app.models import Ticket, SeatLog, Seat, Counter  # assuming these are your SQLAlchemy models
+from app.models import Ticket, SeatLog, Seat, Counter, Tenxa  # assuming these are your SQLAlchemy models
 from sqlalchemy import func, and_, or_
 from app import crud, schemas, database
 from collections import defaultdict
@@ -22,6 +22,14 @@ def get_db():
         yield db
     finally:
         db.close()
+
+def get_stats_db():
+    db = database.SessionStats()
+    try:
+        yield db
+    finally:
+        db.close()
+
 
 # ==== SCHEMAS ====
 
@@ -428,6 +436,7 @@ def list_feedbacks(
         Ticket.tenxa_id == tenxa_id,
         Ticket.status == "done",
         #Ticket.feedback.isnot(None),
+        Ticket.status == "done",
         func.date(Ticket.created_at).between(start, end)
     )
     if rating:
@@ -448,3 +457,477 @@ def list_feedbacks(
         for t in tickets
     ]
 
+class TenxaStats(BaseModel):
+    tenxa_id: int
+    tenxa_name: str
+    total_tickets: int
+    attended_tickets: int
+    avg_waiting_time_seconds: Optional[float]
+    avg_handling_time_seconds: Optional[float]
+    satisfied: int
+    neutral: int
+    needs_improvement: int
+
+@router.get("/all-unit", response_model=List[TenxaStats])
+def stats_by_tenxa(
+    start_date: Optional[date] = Query(None),
+    end_date: Optional[date] = Query(None),
+    db: Session = Depends(get_stats_db),
+):
+    start, end = get_date_range(start_date, end_date)
+
+    # --- Tổng số vé được in ---
+    total_q = (
+        db.query(
+            Ticket.tenxa_id,
+            func.count().label("total_tickets")
+        )
+        .filter(func.date(Ticket.created_at).between(start, end))
+        .group_by(Ticket.tenxa_id)
+        .all()
+    )
+    total_map = {row.tenxa_id: row.total_tickets for row in total_q}
+
+    # --- Tổng số vé đã tiếp đón ---
+    attended_q = (
+        db.query(
+            Ticket.tenxa_id,
+            func.count().label("attended_tickets")
+        )
+        .filter(
+            Ticket.called_at.isnot(None),
+            Ticket.finished_at.isnot(None),
+            func.date(Ticket.created_at).between(start, end)
+        )
+        .group_by(Ticket.tenxa_id)
+        .all()
+    )
+    attended_map = {row.tenxa_id: row.attended_tickets for row in attended_q}
+
+    # --- Thời gian chờ trung bình ---
+    waiting_q = (
+        db.query(
+            Ticket.tenxa_id,
+            func.avg(func.extract("epoch", Ticket.called_at - Ticket.created_at)).label("avg_waiting_time")
+        )
+        .filter(
+            Ticket.created_at.isnot(None),
+            Ticket.called_at.isnot(None),
+            func.date(Ticket.created_at).between(start, end)
+        )
+        .group_by(Ticket.tenxa_id)
+        .all()
+    )
+    waiting_map = {row.tenxa_id: row.avg_waiting_time for row in waiting_q}
+
+    # --- Thời gian tiếp đón trung bình ---
+    handling_q = (
+        db.query(
+            Ticket.tenxa_id,
+            func.avg(func.extract("epoch", Ticket.finished_at - Ticket.called_at)).label("avg_handling_time")
+        )
+        .filter(
+            Ticket.called_at.isnot(None),
+            Ticket.finished_at.isnot(None),
+            func.date(Ticket.created_at).between(start, end)
+        )
+        .group_by(Ticket.tenxa_id)
+        .all()
+    )
+    handling_map = {row.tenxa_id: row.avg_handling_time for row in handling_q}
+
+    # --- Rating ---
+    rating_q = (
+        db.query(
+            Ticket.tenxa_id,
+            Ticket.rating,
+            func.count().label("count")
+        )
+        .filter(
+            Ticket.rating.isnot(None),
+            Ticket.status == "done",   # 👈 chỉ lấy vé done
+            func.date(Ticket.created_at).between(start, end)
+        )
+        .group_by(Ticket.tenxa_id, Ticket.rating)
+        .all()
+    )
+
+
+    rating_map = defaultdict(lambda: {"satisfied": 0, "neutral": 0, "needs_improvement": 0})
+    for tenxa_id, rating, count in rating_q:
+        if rating in rating_map[tenxa_id]:
+            rating_map[tenxa_id][rating] += count
+
+    # --- Lấy danh sách xã ---
+    tenxa_list = db.query(Tenxa.id, Tenxa.name).all()
+
+    results = []
+    for tx_id, tx_name in tenxa_list:
+        results.append(
+            TenxaStats(
+                tenxa_id=tx_id,
+                tenxa_name=tx_name,
+                total_tickets=total_map.get(tx_id, 0),
+                attended_tickets=attended_map.get(tx_id, 0),
+                avg_waiting_time_seconds=waiting_map.get(tx_id),
+                avg_handling_time_seconds=handling_map.get(tx_id),
+                satisfied=rating_map[tx_id]["satisfied"],
+                neutral=rating_map[tx_id]["neutral"],
+                needs_improvement=rating_map[tx_id]["needs_improvement"],  # ⚠️ sửa đúng key
+            )
+        )
+
+    return results
+
+
+from fastapi import Query, Depends, APIRouter
+from fastapi.responses import StreamingResponse
+from sqlalchemy.orm import Session
+from typing import Optional
+from datetime import date
+import io
+import openpyxl
+from openpyxl.styles import Font, Alignment, PatternFill, Border, Side
+from statistics import mean
+
+from app import database
+from app.models import Ticket, Tenxa
+#from .your_stats_file import stats_by_tenxa  # 👈 thay đúng đường dẫn file chứa stats_by_tenxa
+
+
+@router.get("/all-unit/excel")
+def export_stats_excel(
+    start_date: Optional[date] = Query(None),
+    end_date: Optional[date] = Query(None),
+    db: Session = Depends(get_stats_db),
+):
+    start, end = stats_by_tenxa.__globals__["get_date_range"](start_date, end_date)  # reuse util
+    stats = stats_by_tenxa(start_date, end_date, db)
+
+    # --- Sort theo mã xã ---
+    stats_sorted = sorted(stats, key=lambda r: r.tenxa_id)
+
+    # --- Tạo workbook ---
+    wb = openpyxl.Workbook()
+    ws = wb.active
+    ws.title = "Thống kê xã, phường"
+
+    # --- Style cơ bản ---
+    bold_font = Font(bold=True, size=12)
+    center_wrap = Alignment(horizontal="center", vertical="center", wrap_text=True)
+    header_fill = PatternFill("solid", fgColor="BDD7EE")  # xanh nhạt
+    total_fill = PatternFill("solid", fgColor="FFD966")   # vàng nhạt
+    thin_border = Border(
+        left=Side(style="thin"),
+        right=Side(style="thin"),
+        top=Side(style="thin"),
+        bottom=Side(style="thin"),
+    )
+
+    # --- Tiêu đề ---
+    start_fmt = start.strftime("%d/%m/%Y") if start else ""
+    end_fmt = end.strftime("%d/%m/%Y") if end else ""
+
+    title_line1 = "BÁO CÁO THỐNG KÊ THEO XÃ, PHƯỜNG"
+    title_line2 = f"(Từ {start_fmt} đến {end_fmt})"
+
+    # Merge ô cho cả 2 dòng
+    ws.merge_cells("A1:I1")
+    ws.merge_cells("A2:I2")
+
+    # Dòng 1: tiêu đề chính
+    cell1 = ws["A1"]
+    cell1.value = title_line1
+    cell1.font = Font(bold=True, size=16, color="1F4E78")
+    cell1.alignment = Alignment(horizontal="center", vertical="center")
+
+    # Dòng 2: thời gian
+    cell2 = ws["A2"]
+    cell2.value = title_line2
+    cell2.font = Font(bold=False, size=12, color="1F4E78")
+    cell2.alignment = Alignment(horizontal="center", vertical="center")
+
+    # --- Tăng độ cao dòng ---
+    ws.row_dimensions[1].height = 35
+    ws.row_dimensions[2].height = 25
+
+    # --- Header 2 dòng ---
+    ws.append([])  # dòng trống (dòng 3)
+
+    # Dòng 4 (nhóm cột)
+    headers_line1 = [
+        "Số thứ tự",
+        "Tên xã",
+        "Tổng vé đã in",
+        "Vé đã tiếp đón",
+        "Thời gian chờ trung bình (phút)",
+        "Thời gian tiếp đón trung bình (phút)",
+        "ĐÁNH GIÁ", "", ""  # gộp 3 cột
+    ]
+    ws.append(headers_line1)
+
+    # Dòng 5 (các tiêu đề con)
+    headers_line2 = [
+        "", "", "", "", "", "",
+        "Hài lòng",
+        "Bình thường",
+        "Cần cải thiện"
+    ]
+    ws.append(headers_line2)
+
+    # Gộp ô cho các cột không có header con (dọc 2 dòng)
+    for col in range(1, 7):  # từ A tới F
+        ws.merge_cells(start_row=4, start_column=col, end_row=5, end_column=col)
+
+    # Gộp ô cho ĐÁNH GIÁ (3 cột G-H-I)
+    ws.merge_cells(start_row=4, start_column=7, end_row=4, end_column=9)
+
+    # --- Style cho header ---
+    for row in ws.iter_rows(min_row=4, max_row=5, min_col=1, max_col=9):
+        for cell in row:
+            cell.font = bold_font
+            cell.fill = header_fill
+            cell.alignment = center_wrap
+            cell.border = thin_border
+            ws.column_dimensions[openpyxl.utils.get_column_letter(cell.column)].width = 20
+
+    # --- Dữ liệu ---
+    waiting_times = []
+    handling_times = []
+    row_index = 6  # dữ liệu bắt đầu từ dòng 6
+    for row in stats_sorted:
+        waiting_min = (row.avg_waiting_time_seconds or 0) / 60
+        handling_min = (row.avg_handling_time_seconds or 0) / 60
+
+        ws.append([
+            row.tenxa_id or 0,
+            row.tenxa_name or "",
+            row.total_tickets or 0,
+            row.attended_tickets or 0,
+            round(waiting_min, 1),
+            round(handling_min, 1),
+            row.satisfied or 0,
+            row.neutral or 0,
+            row.needs_improvement or 0,
+        ])
+
+        if row.avg_waiting_time_seconds:
+            waiting_times.append(waiting_min)
+        if row.avg_handling_time_seconds:
+            handling_times.append(handling_min)
+
+    # style dữ liệu
+    for row in ws.iter_rows(min_row=6, max_row=ws.max_row, min_col=1, max_col=9):
+        for cell in row:
+            cell.alignment = center_wrap
+            cell.border = thin_border
+
+    # --- Thêm dòng tổng kết ---
+    ws.append([])  # dòng trống
+    total_row_idx = ws.max_row + 1
+
+    ws.cell(row=total_row_idx, column=1, value="TỔNG KẾT")
+    ws.merge_cells(start_row=total_row_idx, start_column=1, end_row=total_row_idx, end_column=2)
+
+    ws.cell(row=total_row_idx, column=3, value=sum(r.total_tickets or 0 for r in stats_sorted))
+    ws.cell(row=total_row_idx, column=4, value=sum(r.attended_tickets or 0 for r in stats_sorted))
+    ws.cell(row=total_row_idx, column=5, value=round(mean(waiting_times), 1) if waiting_times else 0)
+    ws.cell(row=total_row_idx, column=6, value=round(mean(handling_times), 1) if handling_times else 0)
+    ws.cell(row=total_row_idx, column=7, value=sum(r.satisfied or 0 for r in stats_sorted))
+    ws.cell(row=total_row_idx, column=8, value=sum(r.neutral or 0 for r in stats_sorted))
+    ws.cell(row=total_row_idx, column=9, value=sum(r.needs_improvement or 0 for r in stats_sorted))
+
+    # style dòng tổng kết
+    for col in range(1, 10):
+        cell = ws.cell(row=total_row_idx, column=col)
+        cell.font = Font(bold=True)
+        cell.fill = total_fill
+        cell.alignment = center_wrap
+        cell.border = thin_border
+
+    # --- Xuất file ---
+    file_stream = io.BytesIO()
+    wb.save(file_stream)
+    file_stream.seek(0)
+
+    filename = f"Thong_ke_xa_phuong_{start}_{end}.xlsx"
+    return StreamingResponse(
+        file_stream,
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        headers={"Content-Disposition": f"attachment; filename={filename}"}
+    )
+
+@router.get("/all-unit/excel1")
+def export_stats_excel1(
+    start_date: Optional[date] = Query(None),
+    end_date: Optional[date] = Query(None),
+    db: Session = Depends(get_stats_db),
+):
+    start, end = stats_by_tenxa.__globals__["get_date_range"](start_date, end_date)  # reuse util
+    stats = stats_by_tenxa(start_date, end_date, db)
+
+    # --- Sort theo mã xã ---
+    stats_sorted = sorted(stats, key=lambda r: r.tenxa_id)
+
+    # --- Tạo workbook ---
+    wb = openpyxl.Workbook()
+    ws = wb.active
+    ws.title = "Thống kê xã, phường"
+
+    # --- Style cơ bản ---
+    bold_font = Font(bold=True, size=12)
+    center_wrap = Alignment(horizontal="center", vertical="center", wrap_text=True)
+    header_fill = PatternFill("solid", fgColor="BDD7EE")  # xanh nhạt
+    total_fill = PatternFill("solid", fgColor="FFD966")   # vàng nhạt
+    thin_border = Border(
+        left=Side(style="thin"),
+        right=Side(style="thin"),
+        top=Side(style="thin"),
+        bottom=Side(style="thin"),
+    )
+
+    # --- Tiêu đề ---
+    start_fmt = start.strftime("%d/%m/%Y") if start else ""
+    end_fmt = end.strftime("%d/%m/%Y") if end else ""
+
+    title_line1 = "BÁO CÁO THỐNG KÊ THEO XÃ, PHƯỜNG"
+    title_line2 = f"(Từ {start_fmt} đến {end_fmt})"
+
+    ws.merge_cells("A1:I1")
+    ws.merge_cells("A2:I2")
+
+    cell1 = ws["A1"]
+    cell1.value = title_line1
+    cell1.font = Font(bold=True, size=16, color="1F4E78")
+    cell1.alignment = Alignment(horizontal="center", vertical="center")
+
+    cell2 = ws["A2"]
+    cell2.value = title_line2
+    cell2.font = Font(bold=False, size=12, color="1F4E78")
+    cell2.alignment = Alignment(horizontal="center", vertical="center")
+
+    ws.row_dimensions[1].height = 35
+    ws.row_dimensions[2].height = 25
+
+    # --- Để trống dòng 3, header bắt đầu từ dòng 4 ---
+    ws.append([])
+    # Header dòng 4 (gộp 3 cột đánh giá)
+    headers_line1 = [
+        "STT",
+        "Tên xã",
+        "Tổng vé đã in",
+        "Vé đã tiếp đón",
+        "TG chờ TB (phút)",
+        "TG tiếp đón TB (phút)",
+        "Đánh giá",
+        "",
+        "",
+    ]
+    ws.append(headers_line1)
+    ws.merge_cells("G4:I4")
+
+    # Header dòng 5
+    headers_line2 = [
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "Hài lòng",
+        "Bình thường",
+        "Cần cải thiện",
+    ]
+    ws.append(headers_line2)
+
+    # style header
+    for row_idx in (4, 5):
+        for col in range(1, len(headers_line1) + 1):
+            cell = ws.cell(row=row_idx, column=col)
+            cell.font = bold_font
+            cell.fill = header_fill
+            cell.alignment = center_wrap
+            cell.border = thin_border
+            ws.column_dimensions[openpyxl.utils.get_column_letter(col)].width = 20
+
+    # --- Dữ liệu ---
+    waiting_times = []
+    handling_times = []
+    start_data_row = 6
+    for idx, row in enumerate(stats_sorted, start=1):
+        waiting_min = (row.avg_waiting_time_seconds or 0) / 60
+        handling_min = (row.avg_handling_time_seconds or 0) / 60
+
+        ws.append([
+            idx,  # STT
+            row.tenxa_name or "",
+            row.total_tickets or 0,
+            row.attended_tickets or 0,
+            round(waiting_min, 1),
+            round(handling_min, 1),
+            row.satisfied or 0,
+            row.neutral or 0,
+            row.needs_improvement or 0,
+        ])
+
+        if row.avg_waiting_time_seconds:
+            waiting_times.append(waiting_min)
+        if row.avg_handling_time_seconds:
+            handling_times.append(handling_min)
+
+    last_data_row = ws.max_row
+
+    # style dữ liệu + format số
+    for row in ws.iter_rows(min_row=start_data_row, max_row=last_data_row, min_col=1, max_col=9):
+        for col_idx, cell in enumerate(row, start=1):
+            cell.alignment = center_wrap
+            cell.border = thin_border
+
+            # --- Format số ---
+            if col_idx in (3, 4, 7, 8, 9):  # vé và đánh giá -> số nguyên
+                cell.number_format = "0"
+            elif col_idx in (5, 6):  # thời gian trung bình -> 1 số lẻ
+                cell.number_format = "0.0"
+
+    # --- Thêm dòng tổng kết ---
+    ws.append([])  # dòng trống
+    total_row_idx = ws.max_row + 1
+
+    ws.cell(row=total_row_idx, column=1, value="TỔNG KẾT")
+    ws.merge_cells(start_row=total_row_idx, start_column=1, end_row=total_row_idx, end_column=2)
+
+    ws.cell(row=total_row_idx, column=3, value=sum(r.total_tickets or 0 for r in stats_sorted))
+    ws.cell(row=total_row_idx, column=4, value=sum(r.attended_tickets or 0 for r in stats_sorted))
+    ws.cell(row=total_row_idx, column=5, value=round(mean(waiting_times), 1) if waiting_times else 0)
+    ws.cell(row=total_row_idx, column=6, value=round(mean(handling_times), 1) if handling_times else 0)
+    ws.cell(row=total_row_idx, column=7, value=sum(r.satisfied or 0 for r in stats_sorted))
+    ws.cell(row=total_row_idx, column=8, value=sum(r.neutral or 0 for r in stats_sorted))
+    ws.cell(row=total_row_idx, column=9, value=sum(r.needs_improvement or 0 for r in stats_sorted))
+
+    for col in range(1, 10):
+        cell = ws.cell(row=total_row_idx, column=col)
+        cell.font = Font(bold=True)
+        cell.fill = total_fill
+        cell.alignment = center_wrap
+        cell.border = thin_border
+
+        # --- Format số cho tổng kết ---
+        if col in (3, 4, 7, 8, 9):
+            cell.number_format = "0"
+        elif col in (5, 6):
+            cell.number_format = "0.0"
+
+    # --- AutoFilter cho dữ liệu, không bao gồm dòng tổng kết ---
+    ws.auto_filter.ref = f"A5:I{last_data_row}"
+
+    # --- Xuất file ---
+    file_stream = io.BytesIO()
+    wb.save(file_stream)
+    file_stream.seek(0)
+
+    filename = f"Thong_ke_xa_phuong_{start}_{end}.xlsx"
+    return StreamingResponse(
+        file_stream,
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        headers={"Content-Disposition": f"attachment; filename={filename}"}
+    )

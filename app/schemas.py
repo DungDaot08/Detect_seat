@@ -113,7 +113,7 @@ class Role(str, Enum):
     admin = "admin"
     leader = "leader"
     officer = "officer"
-    kisok = "kiosk"
+    kiosk = "kiosk"
     tv = "tv"
 
 class UserBase(BaseModel):
@@ -175,6 +175,7 @@ class TicketRatingUpdate(BaseModel):
 class TvGroupBase(BaseModel):
     name: str
     counter_ids: List[int] = []
+    tts_enable: bool
 
 class TvGroupCreate(TvGroupBase):
     pass
@@ -200,3 +201,32 @@ class TenXaConfigResponse(BaseModel):
 
     class Config:
         orm_mode = True
+        
+class TransferPermissionBase(BaseModel):
+    source_counter_id: int
+    target_counter_ids: List[int]
+    enabled: bool = True
+
+class TransferPermissionCreate(TransferPermissionBase):
+    pass
+
+class TransferPermissionUpdate(TransferPermissionBase):
+    pass
+
+class TransferPermissionOut(BaseModel):
+    id: int
+    source_counter_id: int
+    source_counter_name: Optional[str]
+    target_counter_ids: List[int]
+    target_counter_names: Optional[List[str]] = []
+    enabled: bool
+    created_at: datetime
+    updated_at: Optional[datetime]
+
+    class Config:
+        orm_mode = True
+
+class TransferPermissionCheck(BaseModel):
+    has_permission: bool
+    permission: Optional[TransferPermissionOut]
+    available_targets: Optional[List[dict]] = []

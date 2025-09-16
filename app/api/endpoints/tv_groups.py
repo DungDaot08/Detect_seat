@@ -28,6 +28,7 @@ def get_tv_groups_by_tenxa(tenxa: str = Query(...), db: Session = Depends(get_db
                 name=g.name,
                 tenxa_id=g.tenxa_id,
                 counter_ids=g.counter_ids,
+                tts_enable=g.tts_enable,
                 counters=counters
             )
         )
@@ -53,7 +54,8 @@ def create_tv_group(group: schemas.TvGroupCreate, background_tasks: BackgroundTa
     db_group = models.TvGroup(
         name=group.name,
         tenxa_id=tenxa_id,
-        counter_ids=group.counter_ids
+        counter_ids=group.counter_ids,
+        tts_enable=group.tts_enable
     )
     db.add(db_group)
     db.commit()
@@ -64,6 +66,7 @@ def create_tv_group(group: schemas.TvGroupCreate, background_tasks: BackgroundTa
             "event": "new_tv_group",
             "group_name": group.name,
             "counter_ids": group.counter_ids,
+            "tts_enable": group.tts_enable,
             "tenxa" : tenxa
         }
     )
@@ -74,21 +77,23 @@ def create_tv_group(group: schemas.TvGroupCreate, background_tasks: BackgroundTa
         name=db_group.name,
         tenxa_id=db_group.tenxa_id,
         counter_ids=db_group.counter_ids,
+        tts_enable=db_group.tts_enable,
         counters=counters
     )
 
 
 # Cập nhật group
 @router.put("/updates", response_model=schemas.TvGroupResponse)
-def update_tv_group(group_name: str, group: schemas.TvGroupUpdate, background_tasks: BackgroundTasks, tenxa: str = Query(...), db: Session = Depends(get_db)):
+def update_tv_group(group_id: int, group: schemas.TvGroupUpdate, background_tasks: BackgroundTasks, tenxa: str = Query(...), db: Session = Depends(get_db)):
     tenxa_id = crud.get_tenxa_id_from_slug(db, tenxa)
-    db_group = db.query(models.TvGroup).filter(models.TvGroup.name == group_name).filter(models.TvGroup.tenxa_id == tenxa_id).first()
+    db_group = db.query(models.TvGroup).filter(models.TvGroup.id == group_id).filter(models.TvGroup.tenxa_id == tenxa_id).first()
     if not db_group:
         raise HTTPException(status_code=404, detail="Group not found")
 
     db_group.name = group.name
     db_group.tenxa_id = tenxa_id
     db_group.counter_ids = group.counter_ids
+    db_group.tts_enable = group.tts_enable
 
     db.commit()
     db.refresh(db_group)
@@ -98,6 +103,7 @@ def update_tv_group(group_name: str, group: schemas.TvGroupUpdate, background_ta
             "event": "update_tv_group",
             "group_name": group.name,
             "counter_ids": group.counter_ids,
+            "tts_enable": group.tts_enable,
             "tenxa" : tenxa
         }
     )
@@ -108,15 +114,16 @@ def update_tv_group(group_name: str, group: schemas.TvGroupUpdate, background_ta
         name=db_group.name,
         tenxa_id=db_group.tenxa_id,
         counter_ids=db_group.counter_ids,
+        tts_enable=db_group.tts_enable,
         counters=counters
     )
 
 
 # Xóa group
 @router.delete("/")
-def delete_tv_group(group_name: str, background_tasks: BackgroundTasks, tenxa: str = Query(...), db: Session = Depends(get_db)):
+def delete_tv_group(group_id: int, background_tasks: BackgroundTasks, tenxa: str = Query(...), db: Session = Depends(get_db)):
     tenxa_id = crud.get_tenxa_id_from_slug(db, tenxa)
-    db_group = db.query(models.TvGroup).filter(models.TvGroup.name == group_name).filter(models.TvGroup.tenxa_id == tenxa_id).first()
+    db_group = db.query(models.TvGroup).filter(models.TvGroup.id == group_id).filter(models.TvGroup.tenxa_id == tenxa_id).first()
     if not db_group:
         raise HTTPException(status_code=404, detail="Group not found")
 
@@ -135,10 +142,10 @@ def delete_tv_group(group_name: str, background_tasks: BackgroundTasks, tenxa: s
 
 # Lấy danh sách quầy theo group
 @router.get("/counters", response_model=List[schemas.Counter])
-def get_counters_by_group(group_name: str, tenxa: str = Query(...), db: Session = Depends(get_db)):
+def get_counters_by_group(group_id: int, tenxa: str = Query(...), db: Session = Depends(get_db)):
     tenxa_id = crud.get_tenxa_id_from_slug(db, tenxa)
     db_group = db.query(models.TvGroup).filter(
-        models.TvGroup.name == group_name, models.TvGroup.tenxa_id == tenxa_id
+        models.TvGroup.id == group_id, models.TvGroup.tenxa_id == tenxa_id
     ).first()
     if not db_group:
         raise HTTPException(status_code=404, detail="Group not found")

@@ -2,8 +2,10 @@ from sqlalchemy import Column, Integer, String, ForeignKey, UniqueConstraint, Da
 from sqlalchemy.orm import relationship
 from app.database import Base
 from sqlalchemy.dialects.postgresql import ARRAY
+from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy import Enum as PgEnum
 import enum
+from datetime import datetime
 
 class Field(Base):
     __tablename__ = "fields"
@@ -137,7 +139,7 @@ class Role(str, enum.Enum):
     admin = "admin"
     leader = "leader"
     officer = "officer"
-    kisok = "kiosk"
+    kiosk = "kiosk"
     tv = "tv"
 
 class User(Base):
@@ -199,3 +201,23 @@ class TvGroup(Base):
     name = Column(String(100), nullable=False)
     tenxa_id = Column(Integer, nullable=False)
     counter_ids = Column(ARRAY(Integer), nullable=False, default=[])
+    tts_enable = Column(Boolean, default=True)
+
+class TransferPermission(Base):
+    __tablename__ = "transfer_permissions"
+
+    id = Column(Integer, primary_key=True, index=True)
+    tenxa_id = Column(Integer, nullable=False)
+    source_counter_id = Column(Integer, nullable=False)
+    #target_counter_ids = Column(ARRAY(Integer), nullable=False, default=[])
+    target_counter_ids = Column(JSONB, nullable=False, default=list)
+    enabled = Column(Boolean, default=True)
+    created_at = Column(DateTime(timezone=True), default=func.now())
+    updated_at = Column(DateTime(timezone=True), default=func.now(), onupdate=func.now())
+
+class DossierAgency(Base):
+    __tablename__ = "dossiers"
+
+    id = Column(Integer, primary_key=True, index=True)
+    tenxa_id = Column(Integer, unique=True, nullable=False)   # integer id của xã
+    agency_id = Column(String, nullable=False)  
