@@ -23,12 +23,12 @@ def get_db():
     finally:
         db.close()
 
-def get_stats_db():
-    db = database.SessionStats()
-    try:
-        yield db
-    finally:
-        db.close()
+#def get_stats_db():
+#    db = database.SessionStats()
+#    try:
+#        yield db
+#    finally:
+#        db.close()
 
 
 # ==== SCHEMAS ====
@@ -472,7 +472,7 @@ class TenxaStats(BaseModel):
 def stats_by_tenxa(
     start_date: Optional[date] = Query(None),
     end_date: Optional[date] = Query(None),
-    db: Session = Depends(get_stats_db),
+    db: Session = Depends(get_db),
 ):
     start, end = get_date_range(start_date, end_date)
 
@@ -599,7 +599,7 @@ from app.models import Ticket, Tenxa
 def export_stats_excel(
     start_date: Optional[date] = Query(None),
     end_date: Optional[date] = Query(None),
-    db: Session = Depends(get_stats_db),
+    db: Session = Depends(get_db),
 ):
     start, end = stats_by_tenxa.__globals__["get_date_range"](start_date, end_date)  # reuse util
     stats = stats_by_tenxa(start_date, end_date, db)
@@ -761,7 +761,7 @@ def export_stats_excel(
 def export_stats_excel1(
     start_date: Optional[date] = Query(None),
     end_date: Optional[date] = Query(None),
-    db: Session = Depends(get_stats_db),
+    db: Session = Depends(get_db),
 ):
     start, end = stats_by_tenxa.__globals__["get_date_range"](start_date, end_date)  # reuse util
     stats = stats_by_tenxa(start_date, end_date, db)
