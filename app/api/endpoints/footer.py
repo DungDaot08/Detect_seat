@@ -78,7 +78,7 @@ def get_QR_rating_config(tenxa: str = Query(...), db: Session = Depends(get_db))
     return tenxa_obj
 
 
-@router.get("/tenxa_config", response_model=schemas.AccountConfigResponse)
+@router.get("/account", response_model=schemas.AccountConfigResponse)
 def get_tenxa_config(tenxa: str = Query(...), db: Session = Depends(get_db)):
     tenxa_id = crud.get_tenxa_id_from_slug(db, tenxa)
     tenxa_record = db.query(models.Tenxa).filter(models.Tenxa.id == tenxa_id).first()
@@ -87,7 +87,7 @@ def get_tenxa_config(tenxa: str = Query(...), db: Session = Depends(get_db)):
     return tenxa_record
 
 
-@router.put("/tenxa_config", response_model=schemas.AccountConfigResponse)
+@router.put("/account", response_model=schemas.AccountConfigResponse)
 def update_tenxa_config(
     data: schemas.AccountConfigUpdateRequest,
     tenxa: str = Query(...),
