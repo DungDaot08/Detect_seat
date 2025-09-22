@@ -93,32 +93,3 @@ def get_QR_rating_config(tenxa: str = Query(...), db: Session = Depends(get_db))
         raise HTTPException(status_code=404, detail="Không tìm thấy đơn vị")
     return tenxa_obj
 
-
-@router.get("/account", response_model=schemas.AccountConfigResponse)
-def get_tenxa_config(tenxa: str = Query(...), db: Session = Depends(get_db)):
-    tenxa_id = crud.get_tenxa_id_from_slug(db, tenxa)
-    tenxa_record = db.query(models.Tenxa).filter(models.Tenxa.id == tenxa_id).first()
-    if not tenxa_record:
-        raise HTTPException(status_code=404, detail="Không tìm thấy đơn vị")
-    return tenxa_record
-
-
-@router.put("/account", response_model=schemas.AccountConfigResponse)
-def update_tenxa_config(
-    data: schemas.AccountConfigUpdateRequest,
-    tenxa: str = Query(...),
-    db: Session = Depends(get_db)
-):
-    tenxa_id = crud.get_tenxa_id_from_slug(db, tenxa)
-    tenxa_record = db.query(models.Tenxa).filter(models.Tenxa.id == tenxa_id).first()
-    if not tenxa_record:
-        raise HTTPException(status_code=404, detail="Không tìm thấy đơn vị")
-
-    tenxa_record.postfix = data.postfix
-    # ⚠️ nếu password cần hash thì dùng:
-    # tenxa_record.password = auth.hash_password(data.password)
-    tenxa_record.password = data.password
-
-    db.commit()
-    db.refresh(tenxa_record)
-    return tenxa_record
