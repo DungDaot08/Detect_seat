@@ -230,3 +230,17 @@ class TransferPermissionCheck(BaseModel):
     has_permission: bool
     permission: Optional[TransferPermissionOut]
     available_targets: Optional[List[dict]] = []
+    
+class AccountConfigResponse(BaseModel):
+    id: int
+    slug: str
+    postfix: str
+    password: str
+
+    class Config:
+        orm_mode = True
+
+
+class AccountConfigUpdateRequest(BaseModel):
+    postfix: str
+    password: str
