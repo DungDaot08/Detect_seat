@@ -219,3 +219,48 @@ def search_dossiers(
             })
 
     return {"total": len(results), "dossiers": results}
+
+from fastapi import Body
+
+# Lấy agency_id theo tenxa
+@router.get("/agency")
+def get_agency_id(
+    tenxa: str = Query(...),
+    db: Session = Depends(get_db)
+):
+    tenxa_id = crud.get_tenxa_id_from_slug(db, tenxa)
+    if not tenxa_id:
+        raise HTTPException(status_code=404, detail=f"Không tìm thấy xã slug={tenxa}")
+
+    record = db.query(models.DossierAgency).filter(models.DossierAgency.tenxa_id == tenxa_id).first()
+    if not record:
+        raise HTTPException(status_code=404, detail=f"Không có agency_id cho xã id={tenxa_id}")
+
+    return {"tenxa": tenxa, "tenxa_id": tenxa_id, "agency_id": record.agency_id}
+
+
+# Chỉnh sửa agency_id theo tenxa
+@router.put("/agency")
+def update_agency_id(
+    tenxa: str = Query(...),
+    new_agency_id: str = Body(..., embed=True, description="Agency ID mới"),
+    db: Session = Depends(get_db)
+):
+    tenxa_id = crud.get_tenxa_id_from_slug(db, tenxa)
+    if not tenxa_id:
+        raise HTTPException(status_code=404, detail=f"Không tìm thấy xã slug={tenxa}")
+
+    record = db.query(models.DossierAgency).filter(models.DossierAgency.tenxa_id == tenxa_id).first()
+    if not record:
+        # Nếu chưa có thì insert mới
+        record = models.DossierAgency(tenxa_id=tenxa_id, agency_id=new_agency_id)
+        db.add(record)
+    else:
+        # Nếu có rồi thì update
+        record.agency_id = new_agency_id
+
+    db.commit()
+    db.refresh(record)
+
+    return {"tenxa": tenxa, "tenxa_id": tenxa_id, "agency_id": record.agency_id, "message": "Cập nhật thành công"}
+
