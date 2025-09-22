@@ -23,13 +23,16 @@ def get_config(tenxa: str = Query(...), db: Session = Depends(get_db)):
     footer = crud.get_footer_by_tenxa(db, tenxa_id)
     if not footer:
         raise HTTPException(status_code=404, detail="Chưa có dữ liệu footer cho xã này")
+    tenxa_record = db.query(models.Tenxa).filter(models.Tenxa.id == tenxa_id).first()
 
     return schemas.FooterResponse(
         tenxa=tenxa,
         work_time=footer.work_time,
         hotline=footer.hotline,
         header= footer.header,
-        allowed_time_ranges= footer.allowed_time_ranges
+        allowed_time_ranges= footer.allowed_time_ranges,
+        postfix=tenxa_record.postfix,
+        password=tenxa_record.password
     )
 
 @router.post("/", response_model=schemas.FooterResponse)
@@ -39,6 +42,17 @@ def update_config(data: schemas.FooterCreate, background_tasks: BackgroundTasks,
         raise HTTPException(status_code=404, detail="Không tìm thấy xã")
 
     footer = crud.upsert_footer(db, tenxa_id, data.work_time, data.hotline, data.header, data.allowed_time_ranges)
+    tenxa_record = db.query(models.Tenxa).filter(models.Tenxa.id == tenxa_id).first()
+    if not tenxa_record:
+        raise HTTPException(status_code=404, detail="Không tìm thấy đơn vị")
+
+    tenxa_record.postfix = data.postfix
+    # ⚠️ nếu password cần hash thì dùng:
+    # tenxa_record.password = auth.hash_password(data.password)
+    tenxa_record.password = data.password
+
+    db.commit()
+    db.refresh(tenxa_record)
     
     background_tasks.add_task(
         notify_frontend,
@@ -53,7 +67,9 @@ def update_config(data: schemas.FooterCreate, background_tasks: BackgroundTasks,
         work_time=footer.work_time,
         hotline=footer.hotline,
         header= footer.header,
-        allowed_time_ranges= footer.allowed_time_ranges
+        allowed_time_ranges= footer.allowed_time_ranges,
+        postfix=tenxa_record.postfix,
+        password=tenxa_record.password
     )
 
 @router.put("/qr_rating", response_model=schemas.TenXaConfigResponse)

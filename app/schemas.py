@@ -149,6 +149,9 @@ class FooterBase(BaseModel):
     hotline: Optional[str] = None
     header: Optional[str] = None
     allowed_time_ranges: Optional[List[TimeRange]] = None
+    postfix: str
+    password: str
+    
 
 class FooterCreate(FooterBase):
     pass
