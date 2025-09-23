@@ -2,7 +2,7 @@
 
 from fastapi import APIRouter, Depends, HTTPException, Query, BackgroundTasks
 from sqlalchemy.orm import Session
-from app import crud, schemas, database, models
+from app import crud, schemas, database, models, auth
 from app.api.endpoints.realtime import notify_frontend
 
 router = APIRouter()
@@ -35,8 +35,8 @@ def get_config(tenxa: str = Query(...), db: Session = Depends(get_db)):
         password=tenxa_record.password
     )
 
-@router.post("/", response_model=schemas.FooterResponse)
-def update_config(data: schemas.FooterCreate, background_tasks: BackgroundTasks, tenxa: str = Query(...),  db: Session = Depends(get_db)):
+@router.post("/old", response_model=schemas.FooterResponse)
+def update_config_old(data: schemas.FooterCreate, background_tasks: BackgroundTasks, tenxa: str = Query(...),  db: Session = Depends(get_db)):
     tenxa_id = crud.get_tenxa_id_from_slug(db, tenxa)
     if not tenxa_id:
         raise HTTPException(status_code=404, detail="Không tìm thấy xã")
@@ -71,6 +71,67 @@ def update_config(data: schemas.FooterCreate, background_tasks: BackgroundTasks,
         postfix=tenxa_record.postfix,
         password=tenxa_record.password
     )
+    
+@router.post("/", response_model=schemas.FooterResponse)
+def update_config(
+    data: schemas.FooterCreate, 
+    background_tasks: BackgroundTasks, 
+    tenxa: str = Query(...),  
+    db: Session = Depends(get_db)
+):
+    tenxa_id = crud.get_tenxa_id_from_slug(db, tenxa)
+    if not tenxa_id:
+        raise HTTPException(status_code=404, detail="Không tìm thấy xã")
+
+    footer = crud.upsert_footer(
+        db, tenxa_id, data.work_time, data.hotline, data.header, data.allowed_time_ranges
+    )
+
+    tenxa_record = db.query(models.Tenxa).filter(models.Tenxa.id == tenxa_id).first()
+    if not tenxa_record:
+        raise HTTPException(status_code=404, detail="Không tìm thấy đơn vị")
+
+    try:
+        # Cập nhật postfix & password trong Tenxa
+        tenxa_record.postfix = data.postfix
+
+        # Hash password mới
+        hashed_password = auth.hash_password(data.password)
+        tenxa_record.password = data.password  # ⚠️ Lưu plain-text nếu bạn muốn (không khuyến nghị)
+        
+        # Update tất cả user officer thuộc tenxa
+        users = db.query(models.User).filter(models.User.tenxa_id == tenxa_id, models.User.role == "officer").all()
+        for user in users:
+            if user.counter_id:  # chỉ officer có counter_id
+                user.username = f"quay{user.counter_id}.{data.postfix}"
+                user.full_name = f"quay{user.counter_id}{data.postfix}"
+                user.hashed_password = hashed_password
+
+        db.commit()
+        db.refresh(tenxa_record)
+
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=500, detail=f"Lỗi khi update postfix/password: {e}")
+
+    background_tasks.add_task(
+        notify_frontend,
+        {
+            "event": "update_config",
+            "tenxa": tenxa,
+        }
+    )
+
+    return schemas.FooterResponse(
+        tenxa=tenxa,
+        work_time=footer.work_time,
+        hotline=footer.hotline,
+        header=footer.header,
+        allowed_time_ranges=footer.allowed_time_ranges,
+        postfix=tenxa_record.postfix,
+        password=tenxa_record.password
+    )
+
 
 @router.put("/qr_rating", response_model=schemas.TenXaConfigResponse)
 def update_QR_raing_config(
