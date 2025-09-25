@@ -44,8 +44,8 @@ def create_ticket(
 
     if footer and not is_within_allowed_ranges(footer.allowed_time_ranges or []):
         raise HTTPException(status_code=403, detail="Ngoài giờ làm việc, không thể tạo vé")
-    if not redis_client.acquire_ticket_lock(tenxa_id, ticket.counter_id):
-        raise HTTPException(status_code=429, detail="Bạn vừa lấy vé, vui lòng chờ vài giây")
+    #if not redis_client.acquire_ticket_lock(tenxa_id, ticket.counter_id):
+    #    raise HTTPException(status_code=429, detail="Bạn vừa lấy vé, vui lòng chờ vài giây")
 
     new_ticket = crud.create_ticket(db, tenxa_id, ticket)
     counter_name = crud.get_counter_name_from_counter_id(db, new_ticket.counter_id, tenxa_id)

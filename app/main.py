@@ -33,11 +33,6 @@ app = FastAPI(lifespan=lifespan)
 
 
 # ✅ Tạo app chính
-app = FastAPI(
-    title="Kiosk API",
-    root_path="/app",
-    lifespan=lifespan  # 🔄 Dùng lifecycle mới
-)
 
 # ✅ CORS config
 origins = [

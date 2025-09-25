@@ -1,0 +1,232 @@
+from pydantic import BaseModel
+from datetime import datetime
+from typing import List, Optional
+from enum import Enum
+
+class ProcedureBase(BaseModel):
+    name: str
+    field_id: int
+
+class Procedure(ProcedureBase):
+    id: int
+    class Config:
+        orm_mode = True
+
+class Counter(BaseModel):
+    id: int
+    name: str
+    status: Optional[str] = "active" 
+
+    class Config:
+        orm_mode = True
+
+class ProcedureSearchResponse(BaseModel):
+    id: int
+    name: str
+    field_id: int
+    counters: List[Counter]
+
+class TicketCreate(BaseModel):
+    counter_id: int
+
+class Ticket(BaseModel):
+    id: int
+    number: int
+    counter_id: int
+    counter_name: Optional[str] = None
+    created_at: datetime
+    status: str
+    called_at: Optional[datetime] = None
+    finished_at: Optional[datetime] = None
+
+    class Config:
+        orm_mode = True
+class TicketUpdateStatus(BaseModel):
+    status: str
+class SeatType(str, Enum):
+    officer = "officer"
+    client = "client"
+    
+class SeatBase(BaseModel):
+    name: str
+    type: SeatType
+    counter_id: int
+    status: Optional[bool] = False
+
+class SeatCreate(SeatBase):
+    pass
+
+class SeatUpdate(BaseModel):
+    status: bool
+
+class Seat(SeatBase):
+    id: int
+    last_empty_time: Optional[datetime]
+
+    class Config:
+        orm_mode = True
+
+class SeatPublic(BaseModel):
+    id: int
+    status: bool
+    type: str
+    counter_id: int
+
+    class Config:
+        orm_mode = True
+class CalledTicket(BaseModel):
+    number: int
+    counter_name: str
+    counter_id: int
+    tenxa: str
+    class Config:
+        orm_mode = True
+
+class CounterPauseCreate(BaseModel):
+    reason: str
+
+class CounterPauseLog(BaseModel):
+    id: int
+    counter_id: int
+    reason: str
+    created_at: datetime
+    start_time: datetime  # 🆕
+    end_time: Optional[datetime] = None
+    class Config:
+        orm_mode = True
+
+class CounterUpsertRequest(BaseModel):
+    counter_id: Optional[int] = None
+    name: str
+
+    class Config:
+        orm_mode = True
+        
+class CounterUpsertRequestTTS(BaseModel):
+    counter_id: Optional[int] = None
+    name: str
+
+    class Config:
+        orm_mode = True
+        
+class Role(str, Enum):
+    admin = "admin"
+    leader = "leader"
+    officer = "officer"
+    kiosk = "kiosk"
+    tv = "tv"
+
+class UserBase(BaseModel):
+    username: str
+    full_name: Optional[str]
+    role: Role
+    counter_id: Optional[int] = None
+
+class UserCreate(UserBase):
+    password: str
+
+class User(UserBase):
+    id: int
+    is_active: bool
+
+    class Config:
+        orm_mode = True
+
+class UserLogin(BaseModel):
+    username: str
+    password: str
+
+class Token(BaseModel):
+    access_token: str
+    token_type: str
+    
+class TimeRange(BaseModel):
+    start: str  # "HH:MM"
+    end: str    # "HH:MM"
+    
+class FooterBase(BaseModel):
+    work_time: Optional[str] = None
+    hotline: Optional[str] = None
+    header: Optional[str] = None
+    allowed_time_ranges: Optional[List[TimeRange]] = None
+
+class FooterCreate(FooterBase):
+    pass
+
+class FooterResponse(FooterBase):
+    tenxa: str
+    
+class TicketFeedbackInfo(BaseModel):
+    ticket_number: int
+    counter_name: str
+    status: str
+    finished_at: Optional[datetime] = None
+    can_rate: bool
+    rating: Optional[str] = None   # "satisfied" | "neutral" | "needs_improvement"
+    feedback: Optional[str] = None
+
+    class Config:
+        orm_mode = True
+        
+class TicketRatingUpdate(BaseModel):
+    rating: str   # "satisfied" | "neutral" | "needs_improvement"
+    feedback: Optional[str] = None
+    
+class TvGroupBase(BaseModel):
+    name: str
+    counter_ids: List[int] = []
+    tts_enable: bool
+
+class TvGroupCreate(TvGroupBase):
+    pass
+
+class TvGroupUpdate(TvGroupBase):
+    pass
+
+class TvGroupResponse(TvGroupBase):
+    id: int
+    tenxa_id: int
+    counters: List[Counter] = []
+
+    class Config:
+        orm_mode = True
+        
+class TenXaConfigUpdate(BaseModel):
+    feedback_timeout: int
+    qr_rating: bool
+
+class TenXaConfigResponse(BaseModel):
+    feedback_timeout: int
+    qr_rating: bool
+
+    class Config:
+        orm_mode = True
+        
+class TransferPermissionBase(BaseModel):
+    source_counter_id: int
+    target_counter_ids: List[int]
+    enabled: bool = True
+
+class TransferPermissionCreate(TransferPermissionBase):
+    pass
+
+class TransferPermissionUpdate(TransferPermissionBase):
+    pass
+
+class TransferPermissionOut(BaseModel):
+    id: int
+    source_counter_id: int
+    source_counter_name: Optional[str]
+    target_counter_ids: List[int]
+    target_counter_names: Optional[List[str]] = []
+    enabled: bool
+    created_at: datetime
+    updated_at: Optional[datetime]
+
+    class Config:
+        orm_mode = True
+
+class TransferPermissionCheck(BaseModel):
+    has_permission: bool
+    permission: Optional[TransferPermissionOut]
+    available_targets: Optional[List[dict]] = []
