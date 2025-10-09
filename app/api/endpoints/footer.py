@@ -136,6 +136,7 @@ def update_config(
 @router.put("/qr_rating", response_model=schemas.TenXaConfigResponse)
 def update_QR_raing_config(
     config_data: schemas.TenXaConfigUpdate,
+    background_tasks: BackgroundTasks,
     tenxa: str = Query(...),
     db: Session = Depends(get_db)
 ):
@@ -143,6 +144,13 @@ def update_QR_raing_config(
     tenxa_obj = crud.update_tenxa_config(db, tenxa_id, config_data)
     if not tenxa_obj:
         raise HTTPException(status_code=404, detail="Không tìm thấy đơn vị")
+    background_tasks.add_task(
+        notify_frontend,
+        {
+            "event": "update_config",
+            "tenxa": tenxa,
+        }
+    )
     return tenxa_obj
 
 
