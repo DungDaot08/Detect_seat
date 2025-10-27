@@ -5,6 +5,8 @@ from sqlalchemy.orm import Session
 import uuid, os, subprocess
 from app import database, models, crud, schemas
 from sqlalchemy import func
+from importlib import resources
+import sys
 
 router = APIRouter()
 
@@ -182,6 +184,45 @@ def export_counter_audio(
         }
     )
 
+import os
+import sys
+import uuid
+import shutil
+import tempfile
+import subprocess
+from fastapi import APIRouter, Depends, HTTPException, Query, BackgroundTasks
+from fastapi.responses import FileResponse
+from sqlalchemy.orm import Session
+from app import crud, models, schemas
+
+def get_base_dir() -> str:
+    # Nếu chạy bằng pyz thì sys.argv[0] sẽ là file .pyz
+    return os.path.dirname(os.path.abspath(sys.argv[0]))
+
+
+def safe_path(path: str) -> str:
+    return os.path.abspath(path)
+
+
+def run_ffmpeg(args: list, ffmpeg_path: str):
+    """
+    Wrapper chạy ffmpeg với path tuyệt đối, in stderr khi có lỗi.
+    """
+    cmd = [ffmpeg_path] + args
+    result = subprocess.run(
+        cmd,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        text=True
+    )
+    if result.returncode != 0:
+        raise HTTPException(
+            status_code=500,
+            detail=f"FFmpeg failed: {' '.join(cmd)}\n{result.stderr}"
+        )
+    return result
+
+
 @router.post("/", response_class=FileResponse)
 def generate_tts(
     request: TTSRequest,
@@ -189,26 +230,33 @@ def generate_tts(
     tenxa: str = Query(...),
     db: Session = Depends(get_db)
 ):
+    base_dir = get_base_dir()
+    ffmpeg_path = os.path.join(base_dir, "ffmpeg.exe")
+    tts_dir = os.path.join(base_dir, "TTS")
+
+    if not os.path.exists(ffmpeg_path):
+        raise HTTPException(status_code=500, detail=f"ffmpeg.exe not found at {ffmpeg_path}")
+
+    # Lấy tenxa_id
     tenxa_id = crud.get_tenxa_id_from_slug(db, tenxa)
 
-    # Lấy thông tin quầy
+    # Lấy counter
     counter = db.query(models.Counter).filter(
         models.Counter.tenxa_id == tenxa_id,
         models.Counter.id == request.counter_id
     ).first()
-
     if not counter:
         raise HTTPException(status_code=404, detail="Counter not found")
 
-    # Đường dẫn 2 file local
+    # Chọn file prefix
     if tenxa_id in (0,):
-        prefix = PREFIX_PATH
+        prefix = os.path.join(tts_dir, "prefix", "prefix.mp3")
     else:
-        prefix = PREFIX_PATH_TAP
+        prefix = os.path.join(tts_dir, "prefix", "prefix_tap.mp3")
 
-    number = os.path.join(NUMBERS_PATH, f"{request.ticket_number}.mp3")
+    number = os.path.join(tts_dir, "numbers", f"{request.ticket_number}.mp3")
 
-    # Lấy audio từ DB
+    # Lấy audio counter từ DB
     audio_record = db.query(models.TTSAudio).filter(
         models.TTSAudio.tenxa_id == tenxa_id,
         models.TTSAudio.counter_id == request.counter_id
@@ -217,37 +265,62 @@ def generate_tts(
     if not audio_record:
         raise HTTPException(status_code=404, detail="Missing audio file in DB for counter")
 
-    # Ghi file counter ra đĩa tạm
-    counter_file_path = f"counter_{uuid.uuid4().hex}.mp3"
+    # Tạo file tạm counter
+    counter_file_path = os.path.join(base_dir, f"counter_{uuid.uuid4().hex}.mp3")
     with open(counter_file_path, "wb") as f:
         f.write(audio_record.audio_data)
 
-    # Kiểm tra tồn tại 2 file local
+    # Kiểm tra tồn tại file local
     for path in [prefix, number]:
         if not os.path.exists(path):
             raise HTTPException(status_code=404, detail=f"Missing audio file: {os.path.basename(path)}")
 
-    # Tạo danh sách file ghép
-    output_file = f"tts_{uuid.uuid4().hex}.mp3"
-    list_path = f"temp_{uuid.uuid4().hex}.txt"
-    with open(list_path, "w", encoding="utf-8") as f:
-        f.write(f"file '{prefix}'\n")
-        f.write(f"file '{number}'\n")
-        f.write(f"file '{counter_file_path}'\n")
-
+    # Chuẩn hóa tất cả file về wav mono 44100Hz
+    temp_dir = tempfile.mkdtemp(prefix="tts_norm_")
+    normalized_files = []
     try:
-        subprocess.run(
-            ["ffmpeg", "-y", "-f", "concat", "-safe", "0", "-i", list_path, "-c", "copy", output_file],
-            check=True,
-            stdout=subprocess.DEVNULL,
-            stderr=subprocess.DEVNULL
+        for src in [prefix, number, counter_file_path]:
+            norm_file = os.path.join(temp_dir, f"{uuid.uuid4().hex}.wav")
+            run_ffmpeg(
+                [
+                    "-y",
+                    "-i", safe_path(src),
+                    "-ar", "44100", "-ac", "1",
+                    norm_file
+                ],
+                ffmpeg_path
+            )
+            normalized_files.append(norm_file)
+
+        # Tạo file list.txt
+        list_file = os.path.join(temp_dir, "list.txt")
+        with open(list_file, "w", encoding="utf-8") as f:
+            for nf in normalized_files:
+                # ffmpeg concat yêu cầu path forward slash
+                f.write(f"file '{nf.replace(os.sep, '/')}'\n")
+
+        # Xuất mp3 cuối
+        output_file = os.path.join(base_dir, f"tts_{uuid.uuid4().hex}.mp3")
+        run_ffmpeg(
+            [
+                "-y",
+                "-f", "concat", "-safe", "0",
+                "-i", list_file,
+                "-c:a", "libmp3lame", "-q:a", "2",
+                output_file
+            ],
+            ffmpeg_path
         )
-    except subprocess.CalledProcessError:
-        raise HTTPException(status_code=500, detail="Failed to generate audio")
 
-    # Dọn rác
+    finally:
+        # cleanup file counter tạm
+        if os.path.exists(counter_file_path):
+            background_tasks.add_task(lambda: os.remove(counter_file_path))
+        # cleanup thư mục tạm
+        if os.path.exists(temp_dir):
+            background_tasks.add_task(lambda: shutil.rmtree(temp_dir, ignore_errors=True))
+
+    # cleanup file output sau khi gửi
     background_tasks.add_task(lambda: os.remove(output_file))
-    background_tasks.add_task(lambda: os.remove(list_path))
-    background_tasks.add_task(lambda: os.remove(counter_file_path))
 
-    return FileResponse(output_file, media_type="audio/mpeg", filename=output_file)
+    return FileResponse(output_file, media_type="audio/mpeg", filename=os.path.basename(output_file))
