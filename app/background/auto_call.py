@@ -1,7 +1,7 @@
 import asyncio
 from datetime import datetime, time
 from app.database import SessionLocal
-from app.models import Counter, Ticket
+from app.models import Counter, Ticket, Seat
 from app.api.endpoints.realtime import notify_frontend
 from app import crud
 import pytz
@@ -23,7 +23,12 @@ async def check_and_call_next_for_counter(counter_id: int, tenxa_id: int):
         if counter.status != "active":
             return  
 
-        seats = counter.seats
+        #seats = counter.seats
+        seats = db.query(Seat).filter(
+            Seat.counter_id == counter_id,
+            Seat.tenxa_id == tenxa_id
+)           .all()
+
         if not seats or len(seats) < 2:
             return
 
